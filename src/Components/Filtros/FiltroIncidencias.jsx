@@ -79,8 +79,14 @@ const FiltroIncidencias = ({ iconButtonStyle, inicio, setInicio, fin, setFin, es
                             </span>
                             <DatePicker
                                 slotProps={{
-                                    textField: { size: 'small' },
+                                    textField: { 
+                                        size: 'small',
+                                        inputProps: {
+                                            placeholder: 'DD/MM/YYYY'
+                                        } 
+                                    },
                                 }}
+                                format="DD/MM/YYYY"
                                 value={dayjsConZona(inicio)}
                                 onChange={(date) => {
                                     setInicio(dayjsConZona(date).format('YYYY-MM-DD'));
@@ -94,8 +100,14 @@ const FiltroIncidencias = ({ iconButtonStyle, inicio, setInicio, fin, setFin, es
                             </span>
                             <DatePicker
                                 slotProps={{
-                                    textField: { size: 'small' },
+                                    textField: { 
+                                        size: 'small',
+                                        inputProps: {
+                                            placeholder: 'DD/MM/YYYY'
+                                        } 
+                                    },
                                 }}
+                                format="DD/MM/YYYY"
                                 value={dayjsConZona(fin)}
                                 onChange={(date) => {
                                     setFin(dayjsConZona(date).format('YYYY-MM-DD'));

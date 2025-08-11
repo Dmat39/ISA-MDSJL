@@ -16,8 +16,9 @@ const FaceVerification = () => {
     const canvasRef = useRef(null);
     const [cameraActive, setCameraActive] = useState(false);
     const [photo, setPhoto] = useState(null);
-    const [CanTakePhoto, setCanTakePhoto] = useState(false)
-    const [Credentials, setCredentials] = useState({})
+    const [CanTakePhoto, setCanTakePhoto] = useState(false);
+    const [Credentials, setCredentials] = useState({});
+    const [facingMode, setFacingMode] = useState("environment"); // "environment" para trasera, "user" para frontal
     const { refetch, data, error, isFetching } = useLogin(Credentials)
     
     const getWebcamStream = async () => {
@@ -31,7 +32,7 @@ const FaceVerification = () => {
         try {
             setCameraActive(true);
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "environment" },
+                video: { facingMode: facingMode },
                 audio: false,
             });
             if (videoRef.current) {
@@ -101,6 +102,51 @@ const FaceVerification = () => {
         getWebcamStream();
     };
 
+    const switchCamera = async () => {
+        // Detener el stream actual
+        if (videoRef.current && videoRef.current.srcObject) {
+            const stream = videoRef.current.srcObject;
+            const tracks = stream.getTracks();
+            tracks.forEach((track) => track.stop());
+            videoRef.current.srcObject = null;
+        }
+
+        // Cambiar entre cámara frontal y trasera
+        const newFacingMode = facingMode === "environment" ? "user" : "environment";
+        setFacingMode(newFacingMode);
+
+        // Reiniciar la cámara con el nuevo modo
+        try {
+            setCanTakePhoto(false);
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: newFacingMode },
+                audio: false,
+            });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                checkVideoPlaying();
+            }
+        } catch (err) {
+            toast.error(`Error al cambiar cámara: ${err.message}`);
+            // Si falla, volver al modo anterior
+            setFacingMode(facingMode);
+            // Intentar con el modo anterior
+            try {
+                const fallbackStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: facingMode },
+                    audio: false,
+                });
+                if (videoRef.current) {
+                    videoRef.current.srcObject = fallbackStream;
+                    checkVideoPlaying();
+                }
+            } catch (fallbackErr) {
+                toast.error("Error al restaurar la cámara");
+                setCameraActive(false);
+            }
+        }
+    };
+
 
     const handleSubmit = async (values) => {
         setCredentials(values)
@@ -152,6 +198,7 @@ const FaceVerification = () => {
                     takePhoto={takePhoto}
                     resetPhoto={resetPhoto}
                     handleSubmit={handleSubmit}
+                    switchCamera={switchCamera}
                 />
             </div>
             <canvas ref={canvasRef} style={{ display: 'none' }} />

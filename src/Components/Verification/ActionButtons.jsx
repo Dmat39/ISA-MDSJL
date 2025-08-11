@@ -1,11 +1,12 @@
-import { Button } from "@mui/material"
+import { Button, IconButton } from "@mui/material"
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import LocalSeeIcon from '@mui/icons-material/LocalSee';
 import SendRoundedIcon from '@mui/icons-material/SendRounded';
+import CameraswitchIcon from '@mui/icons-material/Cameraswitch';
 import { base64ToFile } from "../../utils/fileUtils";
 
 
-const ActionButtons = ({ cameraActive, getWebcamStream, stopWebcamStream, photo, takePhoto, resetPhoto, CanTakePhoto, handleSubmit }) => {
+const ActionButtons = ({ cameraActive, getWebcamStream, stopWebcamStream, photo, takePhoto, resetPhoto, CanTakePhoto, handleSubmit, switchCamera }) => {
     return (
         <div>
             {cameraActive ?
@@ -32,7 +33,7 @@ const ActionButtons = ({ cameraActive, getWebcamStream, stopWebcamStream, photo,
                         </Button>
                     </div>
                 ) : (
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 items-center">
                         <Button
                             className="!capitalize !rounded-md flex gap-1"
                             size="large"
@@ -43,6 +44,17 @@ const ActionButtons = ({ cameraActive, getWebcamStream, stopWebcamStream, photo,
                             <ArrowBackIosIcon className='!size-5 mb-0.5' />
                             Cerrar cámara
                         </Button>
+                        
+                        {/* Botón para cambiar cámara */}
+                        <IconButton
+                            onClick={switchCamera}
+                            className="!bg-gray-100 hover:!bg-gray-200 !transition-colors"
+                            size="small"
+                            title="Cambiar cámara"
+                        >
+                            <CameraswitchIcon className="!size-7 text-gray-700" />
+                        </IconButton>
+                        
                         <Button
                             variant="contained"
                             className="!capitalize !rounded-md flex gap-1"

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 const useGeolocation = () => {
     const [location, setLocation] = useState({
@@ -6,7 +6,8 @@ const useGeolocation = () => {
         longitude: null,
         address: '',
         loading: true,
-        error: null
+        error: null,
+        permissionStatus: null
     });
 
     const getAddressFromCoords = async (latitude, longitude) => {
@@ -89,23 +90,80 @@ const useGeolocation = () => {
         return `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`;
     };
 
-    const getCurrentLocation = () => {
+    // Verificar permisos de geolocalización
+    const checkGeolocationPermission = useCallback(async () => {
+        // Verificar si la API de permisos está disponible
+        if ('permissions' in navigator) {
+            try {
+                const permission = await navigator.permissions.query({ name: 'geolocation' });
+                console.log('Estado del permiso de geolocalización:', permission.state);
+                
+                setLocation(prev => ({ ...prev, permissionStatus: permission.state }));
+                
+                // Escuchar cambios en el permiso
+                permission.addEventListener('change', () => {
+                    console.log('Cambio en permiso de geolocalización:', permission.state);
+                    setLocation(prev => ({ ...prev, permissionStatus: permission.state }));
+                });
+                
+                return permission.state;
+            } catch (err) {
+                console.warn('Error al verificar permisos:', err);
+            }
+        }
+        return null;
+    }, []);
+
+    const getCurrentLocation = useCallback(async () => {
+        console.log('🔄 Iniciando solicitud de geolocalización...');
         setLocation(prev => ({ ...prev, loading: true, error: null }));
 
+        // Verificar soporte de geolocalización
         if (!navigator.geolocation) {
+            const errorMsg = 'Tu navegador no soporta geolocalización';
+            console.error('❌', errorMsg);
             setLocation(prev => ({
                 ...prev,
                 loading: false,
-                error: 'Geolocalización no soportada por este navegador'
+                error: errorMsg,
+                permissionStatus: 'denied'
             }));
             return;
         }
 
+        // Verificar permisos antes de solicitar ubicación
+        const permissionStatus = await checkGeolocationPermission();
+        
+        if (permissionStatus === 'denied') {
+            const errorMsg = 'Los permisos de ubicación están bloqueados. Ve a Configuración > Safari > Ubicación para habilitarlos.';
+            console.error('❌', errorMsg);
+            setLocation(prev => ({
+                ...prev,
+                loading: false,
+                error: errorMsg,
+                permissionStatus: 'denied'
+            }));
+            return;
+        }
+
+        // Configuración optimizada para iOS
+        const options = {
+            enableHighAccuracy: true,
+            timeout: 15000, // 15 segundos para iOS
+            maximumAge: 60000 // 1 minuto de cache
+        };
+
+        console.log('📍 Solicitando ubicación con opciones:', options);
+
         navigator.geolocation.getCurrentPosition(
             async (position) => {
-                const { latitude, longitude } = position.coords;
+                const { latitude, longitude, accuracy } = position.coords;
                 
-                console.log('Ubicación obtenida:', { latitude, longitude });
+                console.log('✅ Ubicación obtenida:', { 
+                    latitude, 
+                    longitude, 
+                    accuracy: Math.round(accuracy) + 'm' 
+                });
                 
                 // Establecer coordenadas inmediatamente con placeholder
                 setLocation({
@@ -113,49 +171,69 @@ const useGeolocation = () => {
                     longitude,
                     address: 'Obteniendo dirección...',
                     loading: false,
-                    error: null
+                    error: null,
+                    permissionStatus: 'granted'
                 });
 
-                // Obtener dirección detallada
-                const detailedAddress = await getAddressFromCoords(latitude, longitude);
-                
-                // Actualizar con la dirección detallada
-                setLocation(prev => ({
-                    ...prev,
-                    address: detailedAddress
-                }));
+                try {
+                    // Obtener dirección detallada
+                    const detailedAddress = await getAddressFromCoords(latitude, longitude);
+                    
+                    // Actualizar con la dirección detallada
+                    setLocation(prev => ({
+                        ...prev,
+                        address: detailedAddress
+                    }));
+                    
+                    console.log('✅ Dirección actualizada:', detailedAddress);
+                } catch (addressError) {
+                    console.warn('⚠️ Error obteniendo dirección:', addressError);
+                    // Mantener coordenadas pero con dirección fallback
+                    setLocation(prev => ({
+                        ...prev,
+                        address: `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`
+                    }));
+                }
             },
             (error) => {
                 let errorMessage = 'Error al obtener ubicación';
+                let userFriendlyMessage = '';
                 
                 switch (error.code) {
                     case error.PERMISSION_DENIED:
                         errorMessage = 'Permiso de ubicación denegado';
+                        userFriendlyMessage = 'Para usar esta función, permite el acceso a tu ubicación. En iOS: Configuración > Safari > Ubicación > Permitir.';
                         break;
                     case error.POSITION_UNAVAILABLE:
                         errorMessage = 'Ubicación no disponible';
+                        userFriendlyMessage = 'No se puede determinar tu ubicación. Verifica que tengas GPS activado y buena señal.';
                         break;
                     case error.TIMEOUT:
                         errorMessage = 'Tiempo de espera agotado';
+                        userFriendlyMessage = 'La solicitud de ubicación tardó demasiado. Intenta de nuevo o verifica tu conexión.';
                         break;
                     default:
                         errorMessage = 'Error desconocido al obtener ubicación';
+                        userFriendlyMessage = 'Ocurrió un error inesperado. Intenta recargar la página.';
                         break;
                 }
+                
+                console.error('❌ Error de geolocalización:', {
+                    code: error.code,
+                    message: error.message,
+                    userMessage: userFriendlyMessage
+                });
                 
                 setLocation(prev => ({
                     ...prev,
                     loading: false,
-                    error: errorMessage
+                    error: userFriendlyMessage,
+                    permissionStatus: error.code === error.PERMISSION_DENIED ? 'denied' : 'granted'
                 }));
             },
-            {
-                enableHighAccuracy: true, // Cambiar a true para mejor precisión
-                timeout: 20000, // Aumentar timeout a 20 segundos
-                maximumAge: 300000 // 5 minutos
-            }
+            options
         );
-    };
+    }, [checkGeolocationPermission]);
 
     useEffect(() => {
         getCurrentLocation();
@@ -163,7 +241,8 @@ const useGeolocation = () => {
 
     return {
         ...location,
-        refetch: getCurrentLocation
+        refetch: getCurrentLocation,
+        requestPermission: getCurrentLocation
     };
 };
 

@@ -13,7 +13,7 @@ import ModalSubirFotos from './ModalSubirFotos';
 
 const RegistrarIncidencia = () => {
     const { tiposCasos, loading: loadingTipos, error: errorTipos } = useTiposCasos();
-    const { latitude, longitude, address, loading: loadingLocation, error: errorLocation } = useGeolocation();
+    const { latitude, longitude, address, loading: loadingLocation, error: errorLocation, permissionStatus, requestPermission } = useGeolocation();
     const { obtenerJurisdiccionActual, detectarJurisdiccion, jurisdicciones, loading: loadingJurisdiccion, error: errorJurisdiccion } = useJurisdiccionDetection();
     const { userData, loading: loadingUser, error: errorUser } = useUserData();
     const { enviarPreincidencia, loading: loadingEnvio, error: errorEnvio } = useEnviarPreincidencia();
@@ -114,6 +114,23 @@ const RegistrarIncidencia = () => {
                 severity: 'error'
             });
             return;
+        }
+
+        // Validar que la fecha y hora no sean futuras
+        if (formData.fechaIncidente && formData.horaIncidente) {
+            const fechaHoraIncidente = formData.fechaIncidente
+                .hour(formData.horaIncidente.hour())
+                .minute(formData.horaIncidente.minute());
+            const ahora = dayjsConZona();
+
+            if (fechaHoraIncidente.isAfter(ahora)) {
+                setSnackbar({
+                    open: true,
+                    message: 'La fecha y hora del incidente no puede ser futura. Por favor, corrige los datos.',
+                    severity: 'error'
+                });
+                return;
+            }
         }
 
         try {
@@ -468,13 +485,37 @@ const RegistrarIncidencia = () => {
                         </label>
                         <DatePicker
                             value={formData.fechaIncidente}
-                            onChange={(date) => handleInputChange('fechaIncidente', date)}
+                            onChange={(date) => {
+                                handleInputChange('fechaIncidente', date);
+                                
+                                // Si selecciona fecha de hoy, verificar que la hora no sea futura
+                                if (date && formData.horaIncidente) {
+                                    const hoy = dayjsConZona();
+                                    const fechaEsHoy = date.isSame(hoy, 'day');
+                                    
+                                    if (fechaEsHoy) {
+                                        const horaCompleta = date.hour(formData.horaIncidente.hour()).minute(formData.horaIncidente.minute());
+                                        
+                                        if (horaCompleta.isAfter(hoy)) {
+                                            // Ajustar la hora a la actual si es futura
+                                            handleInputChange('horaIncidente', hoy);
+                                            setSnackbar({
+                                                open: true,
+                                                message: 'Se ajustó la hora porque no puede ser futura para la fecha de hoy.',
+                                                severity: 'info'
+                                            });
+                                        }
+                                    }
+                                }
+                            }}
+                            maxDate={dayjsConZona()} // Solo permite hasta hoy
                             slotProps={{
                                 textField: {
                                     size: 'small',
                                     fullWidth: true,
                                     className: 'bg-gray-50',
-                                    sx: { '& .MuiInputBase-input': { fontSize: '0.775rem' } }
+                                    sx: { '& .MuiInputBase-input': { fontSize: '0.775rem' } },
+                                    helperText: 'Solo fechas pasadas y presente'
                                 }
                             }}
                         />
@@ -485,13 +526,43 @@ const RegistrarIncidencia = () => {
                         </label>
                         <TimePicker
                             value={formData.horaIncidente}
-                            onChange={(time) => handleInputChange('horaIncidente', time)}
+                            onChange={(time) => {
+                                // Validar que no sea hora futura si es fecha de hoy
+                                const fechaSeleccionada = formData.fechaIncidente;
+                                const hoy = dayjsConZona();
+                                
+                                if (time && fechaSeleccionada) {
+                                    const fechaEsHoy = fechaSeleccionada.isSame(hoy, 'day');
+                                    
+                                    if (fechaEsHoy) {
+                                        // Si es hoy, verificar que la hora no sea futura
+                                        const horaCompleta = fechaSeleccionada.hour(time.hour()).minute(time.minute());
+                                        
+                                        if (horaCompleta.isAfter(hoy)) {
+                                            // Si la hora es futura, establecer la hora actual
+                                            const horaActual = hoy;
+                                            handleInputChange('horaIncidente', horaActual);
+                                            setSnackbar({
+                                                open: true,
+                                                message: 'No se puede seleccionar una hora futura. Se estableció la hora actual.',
+                                                severity: 'warning'
+                                            });
+                                            return;
+                                        }
+                                    }
+                                }
+                                
+                                handleInputChange('horaIncidente', time);
+                            }}
                             slotProps={{
                                 textField: {
                                     size: 'small',
                                     fullWidth: true,
                                     className: 'bg-gray-50',
-                                    sx: { '& .MuiInputBase-input': { fontSize: '0.775rem' } }
+                                    sx: { '& .MuiInputBase-input': { fontSize: '0.775rem' } },
+                                    helperText: formData.fechaIncidente?.isSame(dayjsConZona(), 'day') 
+                                        ? 'Solo hasta la hora actual' 
+                                        : 'Seleccione la hora'
                                 }
                             }}
                         />
@@ -500,20 +571,61 @@ const RegistrarIncidencia = () => {
 
                 {/* Dirección */}
                 <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Dirección
-                        {loadingLocation && (
-                            <span className="ml-2 text-blue-600">
-                                <Loader className="w-3 h-3 inline animate-spin" />
-                                <span className="ml-1 text-xs">Obteniendo ubicación...</span>
-                            </span>
+                    <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-medium text-gray-700">
+                            Dirección
+                            {loadingLocation && (
+                                <span className="ml-2 text-blue-600">
+                                    <Loader className="w-3 h-3 inline animate-spin" />
+                                    <span className="ml-1 text-xs">Obteniendo ubicación...</span>
+                                </span>
+                            )}
+                        </label>
+                        
+                        {/* Botón de reintento para errores de ubicación */}
+                        {errorLocation && !loadingLocation && (
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                color="primary"
+                                onClick={requestPermission}
+                                className="text-xs py-1 px-2 h-6"
+                                sx={{ 
+                                    fontSize: '0.7rem',
+                                    minWidth: 'auto',
+                                    padding: '2px 8px'
+                                }}
+                            >
+                                <Navigation className="w-3 h-3 mr-1" />
+                                Reintentar
+                            </Button>
                         )}
-                        {errorLocation && (
-                            <span className="ml-2 text-red-500 text-xs">
-                                {errorLocation}
-                            </span>
-                        )}
-                    </label>
+                    </div>
+
+                    {/* Alert para errores de permisos de ubicación */}
+                    {errorLocation && (
+                        <Alert 
+                            severity={permissionStatus === 'denied' ? 'warning' : 'error'}
+                            className="mb-2"
+                            sx={{
+                                fontSize: '0.75rem',
+                                padding: '4px 8px',
+                                '& .MuiAlert-message': {
+                                    fontSize: '0.75rem',
+                                    padding: '0px'
+                                },
+                                '& .MuiAlert-icon': {
+                                    fontSize: '1rem',
+                                }
+                            }}
+                        >
+                            {permissionStatus === 'denied' 
+                                ? '📱 Para obtener tu ubicación automáticamente, ve a Configuración > Safari > Ubicación > Permitir acceso'
+                                : errorLocation
+                            }
+                        </Alert>
+                    )}
+
                     <TextField
                         fullWidth
                         multiline
@@ -522,27 +634,37 @@ const RegistrarIncidencia = () => {
                         value={formData.direccion}
                         onChange={(e) => handleInputChange('direccion', e.target.value)}
                         className="bg-gray-50"
-                        placeholder={loadingLocation ? "Obteniendo ubicación actual..." : "Ingrese la dirección del incidente"}
+                        placeholder={loadingLocation ? "🔄 Obteniendo ubicación actual..." : errorLocation ? "✏️ Ingresa manualmente la dirección" : "📍 Ingrese la dirección del incidente"}
                         disabled={loadingLocation}
                         sx={{ '& .MuiInputBase-input': { fontSize: '0.875rem' } }}
                     />
 
-                    {/* Indicador de coordenadas */}
+                    {/* Estado de permisos y coordenadas */}
                     {coordenadasSeleccionadas.latitud && coordenadasSeleccionadas.longitud && (
-                        <div className="mt-1 p-1 bg-blue-50 border border-blue-200 rounded-md">
+                        <div className="mt-1 p-2 bg-green-50 border border-green-200 rounded-md">
                             <div className="flex items-center justify-between">
-                                <div className="text-xs text-blue-700">
-                                    <span className="font-medium">Coordenadas:</span>
+                                <div className="text-xs text-green-700">
+                                    <span className="font-medium">Ubicación:</span>
                                     <span className="ml-1">
                                         {coordenadasSeleccionadas.latitud.toFixed(6)}, {coordenadasSeleccionadas.longitud.toFixed(6)}
                                     </span>
                                 </div>
-                                <div className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                                <div className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
                                     {coordenadasSeleccionadas.latitud === latitude && coordenadasSeleccionadas.longitud === longitude
-                                        ? 'Ubicación inicial'
-                                        : 'Seleccionada en mapa'
+                                        ? '📍 GPS actual'
+                                        : '🗺️ Seleccionada'
                                     }
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Indicador cuando no hay ubicación pero tampoco error */}
+                    {!coordenadasSeleccionadas.latitud && !loadingLocation && !errorLocation && (
+                        <div className="mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                            <div className="text-xs text-yellow-700">
+                                <span className="font-medium">⚠️ Sin ubicación GPS</span>
+                                <span className="ml-1">- Ingresa la dirección manualmente o usa el mapa</span>
                             </div>
                         </div>
                     )}

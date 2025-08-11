@@ -15,11 +15,7 @@ const AppRouter = () => {
         <Route path="/verificacion" element={<PublicRouter element={<FaceVerification />} />} />
         <Route path="/" element={<PrivateRouter element={<Layout />} />}>
           <Route path="/" element={<LayoutIncidencias />} />
-<<<<<<< HEAD
           <Route path="/nueva" element={<RegistrarIncidencia />} />
-=======
-          <Route path="/nueva" element={<NuevaIncidencia />} />
->>>>>>> 01b49df72fbda854b79e5338af384bb554a05fb9
           <Route path="/perfil" element={<ListaIncidencias />} />
         </Route>
       </Routes>
