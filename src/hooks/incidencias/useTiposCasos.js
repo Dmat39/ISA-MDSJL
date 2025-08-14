@@ -4,7 +4,7 @@ import { incidenceApi } from '../../utils/axiosConfig';
 const useTiposCasos = () => {
     const fetchTiposCasos = async ({ signal }) => {
         const response = await incidenceApi.get(
-            'tipificaciones/tipo_casos',
+            '/api/tipificaciones/tipo_casos',
             { signal }
         );
 
