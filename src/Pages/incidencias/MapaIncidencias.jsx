@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
@@ -13,18 +13,26 @@ L.Icon.Default.mergeOptions({
 });
 
 const MapaIncidencias = ({ data }) => {
-    const position = [-12.0464, -77.0428]; // Lima, Perú
+    const position = [-12.0464, -77.0428];
+
+    const validPoints = useMemo(() =>
+        (data || []).filter(p => {
+            const lat = parseFloat(p.latitud);
+            const lng = parseFloat(p.longitud);
+            return Number.isFinite(lat) && Number.isFinite(lng);
+        })
+    , [data]);
 
     return (
-        <div className='flex flex-col flex-1 bg-amber-100 overflow-hidden rounded-lg border border-gray-300 shadow-xs'>
-            <MapContainer center={position} zoom={13} style={{ flex: 1 }}>
+        <div className='flex flex-col overflow-hidden rounded-lg border border-gray-300 shadow-xs h-[72vh]'>
+            <MapContainer center={position} zoom={15} style={{ height: '100%', width: '100%' }}>
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
 
                 <MarkerClusterGroup chunkedLoading>
-                    {data.map(punto => (
+                    {validPoints.map(punto => (
                         <Marker
                             key={punto.id}
                             position={[parseFloat(punto.latitud), parseFloat(punto.longitud)]}
@@ -45,8 +53,13 @@ const MapaIncidencias = ({ data }) => {
                     ))}
                 </MarkerClusterGroup>
 
-                <FitBounds puntos={data} />
+                <FitBounds puntos={validPoints} />
             </MapContainer>
+            {validPoints.length === 0 && (
+                <div className="p-3 text-center text-sm text-gray-600">
+                    No hay puntos con coordenadas válidas para mostrar en el mapa
+                </div>
+            )}
         </div>
     );
 };

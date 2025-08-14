@@ -1,11 +1,19 @@
-import { Button, FormControl, Input, InputLabel, MenuItem, Popover, Select, Tooltip } from "@mui/material";
+import { Button, FormControl, Input, InputLabel, MenuItem, Popover, Select, Tooltip, TextField } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers";
 import { Filter } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { dayjsConZona } from "../../utils/dayjsConfig";
+import { useDispatch, useSelector } from "react-redux";
+import { toast } from "sonner";
+import { incidenceApi } from "../../utils/axiosConfig";
+import { setUser } from "../../redux/slices/AuthSlice";
 
 const FiltroIncidencias = ({ iconButtonStyle, inicio, setInicio, fin, setFin, estado, setEstado, refetch }) => {
     const [anchorEl, setAnchorEl] = useState(null);
+    const dispatch = useDispatch();
+    const { user, token } = useSelector((state) => state.auth);
+    const [phone, setPhone] = useState("");
+    const [savingPhone, setSavingPhone] = useState(false);
 
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
@@ -17,6 +25,27 @@ const FiltroIncidencias = ({ iconButtonStyle, inicio, setInicio, fin, setFin, es
 
     const open = Boolean(anchorEl);
     const id = open ? 'simple-popover' : undefined;
+
+    useEffect(() => {
+        if (open) {
+            setPhone(user?.celular || "");
+        }
+    }, [open, user]);
+
+    const handleSavePhone = async () => {
+        if (!phone) return;
+        try {
+            setSavingPhone(true);
+            await incidenceApi.patch('/api/serenos/phone', { celular: phone });
+            dispatch(setUser({ token, data: { ...user, celular: phone } }));
+            toast.success('Número de celular actualizado');
+        } catch (err) {
+            const msg = err?.response?.data?.message || err.message || 'Error actualizando celular';
+            toast.error(msg);
+        } finally {
+            setSavingPhone(false);
+        }
+    };
 
     return (
         <>
@@ -83,7 +112,7 @@ const FiltroIncidencias = ({ iconButtonStyle, inicio, setInicio, fin, setFin, es
                                         size: 'small',
                                         inputProps: {
                                             placeholder: 'DD/MM/YYYY'
-                                        } 
+                                        }
                                     },
                                 }}
                                 format="DD/MM/YYYY"
@@ -104,7 +133,7 @@ const FiltroIncidencias = ({ iconButtonStyle, inicio, setInicio, fin, setFin, es
                                         size: 'small',
                                         inputProps: {
                                             placeholder: 'DD/MM/YYYY'
-                                        } 
+                                        }
                                     },
                                 }}
                                 format="DD/MM/YYYY"
@@ -114,6 +143,30 @@ const FiltroIncidencias = ({ iconButtonStyle, inicio, setInicio, fin, setFin, es
                                     queueMicrotask(refetch);
                                 }}
                             />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <span className="text-sm font-medium">Celular</span>
+                        <div className="flex gap-2">
+                            <TextField
+                                size="small"
+                                value={phone}
+                                onChange={(e) => {
+                                    const v = e.target.value.replace(/[^0-9]/g, '').slice(0, 15);
+                                    setPhone(v);
+                                }}
+                                placeholder="Ingrese celular"
+                                inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                            />
+                            <Button
+                                variant="contained"
+                                size="small"
+                                onClick={handleSavePhone}
+                                disabled={savingPhone || phone === (user?.celular || "")}
+                            >
+                                {savingPhone ? 'Guardando...' : 'Guardar'}
+                            </Button>
                         </div>
                     </div>
                 </div>

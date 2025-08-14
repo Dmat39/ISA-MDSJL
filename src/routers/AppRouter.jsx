@@ -6,7 +6,6 @@ import ListaIncidencias from '../Pages/incidencias/ListaIncidencias';
 import RegistrarIncidencia from '../Pages/incidencias/Nueva Incidencia/RegistrarIncidencia';
 import Layout from '../Pages/Layout';
 import LayoutIncidencias from '../Pages/incidencias/LayoutIncidencias';
-import NuevaIncidencia from '../Pages/incidencias/Registrar/NuevaIncidencia';
 
 const AppRouter = () => {
   return (

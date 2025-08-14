@@ -1,16 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import { incidenceApi } from '../../utils/axiosConfig';
 
 const useTiposCasos = () => {
     const fetchTiposCasos = async ({ signal }) => {
-        const response = await axios.get(
-            `${import.meta.env.VITE_APP_ENDPOINT_PRUEBA}tipificaciones/tipo_casos`,
-            {
-                signal,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            }
+        const response = await incidenceApi.get(
+            '/api/tipificaciones/tipo_casos',
+            { signal }
         );
 
         return response.data?.data || [];

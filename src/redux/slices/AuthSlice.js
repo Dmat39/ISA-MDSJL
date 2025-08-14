@@ -1,7 +1,8 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { setToken, clearToken } from '../../utils/axiosConfig';
 
 const initialState = {
-  // token: null, // Comentado temporalmente - aplicar más adelante
+  token: null,
   user: null,
 };
 
@@ -10,16 +11,17 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     setUser(state, action) {
-      // const { token, ...userData } = action.payload; // Comentado temporalmente
-      // state.user = userData;
-      // state.token = token;
-      
-      // Versión sin token (temporal)
-      state.user = action.payload;
+      const { token, data } = action.payload;
+      state.user = data;
+      state.token = token;
+      // Sincronizar token global
+      setToken(token);
     },
     clearUser(state) {
       state.user = null;
-      // state.token = null; // Comentado temporalmente
+      state.token = null;
+      // Limpiar token global para evitar requests con credenciales previas
+      clearToken();
     },
     replaceState(_, action) {
       return action.payload;

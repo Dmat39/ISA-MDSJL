@@ -10,9 +10,7 @@ import {
     IconButton,
     Alert,
     LinearProgress,
-    Chip,
-    Tabs,
-    Tab
+    Chip
 } from '@mui/material';
 import { 
     CloudUpload, 
@@ -20,23 +18,14 @@ import {
     Delete, 
     Image as ImageIcon,
     PhotoCamera,
-    Videocam,
-    CameraAlt,
-    VideoCall
+    Videocam
 } from '@mui/icons-material';
 
 const ModalSubirFotos = ({ open, onClose, fotos, onFotosChange, subtipoSeleccionado }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [activeTab, setActiveTab] = useState(0);
-    const [isRecording, setIsRecording] = useState(false);
-    const [mediaStream, setMediaStream] = useState(null);
-    const [recordedBlob, setRecordedBlob] = useState(null);
     
     const fileInputRef = useRef(null);
-    const videoRef = useRef(null);
-    const mediaRecorderRef = useRef(null);
-    const chunksRef = useRef([]);
 
     // Subtipos que permiten videos
     const SUBTIPOS_CON_VIDEO = [2127, 2130, 2131, 2134, 2135, 2137, 2147, 2178, 2179, 2185, 2193, 12199, 12200];
@@ -187,151 +176,30 @@ const ModalSubirFotos = ({ open, onClose, fotos, onFotosChange, subtipoSeleccion
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
 
-    // Funciones para grabación de video
-    const startCamera = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: 'environment', // Cámara trasera por defecto
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 }
-                },
-                audio: true
-            });
-            
-            setMediaStream(stream);
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-            }
-        } catch (err) {
-            setError('Error al acceder a la cámara: ' + err.message);
-        }
-    };
-
-    const stopCamera = () => {
-        if (mediaStream) {
-            mediaStream.getTracks().forEach(track => track.stop());
-            setMediaStream(null);
-        }
-        if (videoRef.current) {
-            videoRef.current.srcObject = null;
-        }
-    };
-
-    const startRecording = () => {
-        if (!mediaStream) return;
-
-        chunksRef.current = [];
-        const mediaRecorder = new MediaRecorder(mediaStream, {
-            mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9') 
-                ? 'video/webm;codecs=vp9' 
-                : MediaRecorder.isTypeSupported('video/webm') 
-                    ? 'video/webm' 
-                    : 'video/mp4'
-        });
-
-        mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0) {
-                chunksRef.current.push(event.data);
-            }
-        };
-
-        mediaRecorder.onstop = () => {
-            const blob = new Blob(chunksRef.current, { type: mediaRecorder.mimeType });
-            setRecordedBlob(blob);
-        };
-
-        mediaRecorderRef.current = mediaRecorder;
-        mediaRecorder.start();
-        setIsRecording(true);
-    };
-
-    const stopRecording = () => {
-        if (mediaRecorderRef.current && isRecording) {
-            mediaRecorderRef.current.stop();
-            setIsRecording(false);
-        }
-    };
-
-    const saveRecordedVideo = async () => {
-        if (!recordedBlob) return;
-
-        try {
-            setLoading(true);
-            
-            // Crear archivo con nombre y tipo apropiado
-            const fileName = `video_${Date.now()}.${recordedBlob.type.includes('webm') ? 'webm' : 'mp4'}`;
-            const file = new File([recordedBlob], fileName, { type: recordedBlob.type });
-
-            // Validar el archivo grabado
-            const errorValidacion = await validarArchivo(file);
-            if (errorValidacion) {
-                setError(errorValidacion);
-                return;
-            }
-
-            // Crear preview
-            const preview = URL.createObjectURL(recordedBlob);
-            
-            const nuevoVideo = {
-                id: Date.now() + Math.random(),
-                file: file,
-                preview: preview,
-                name: fileName,
-                size: recordedBlob.size,
-                type: recordedBlob.type,
-                isVideo: true
-            };
-
-            onFotosChange([...fotos, nuevoVideo]);
-            setRecordedBlob(null);
-            
-        } catch (err) {
-            setError('Error al guardar el video grabado');
-            console.error('Error:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const handleClose = () => {
         setError('');
-        stopCamera();
-        setRecordedBlob(null);
-        setIsRecording(false);
-        setActiveTab(0);
         onClose();
     };
 
     return (
-        <>
-            <style>
-                {`
-                    @keyframes pulse {
-                        0% { opacity: 1; }
-                        50% { opacity: 0.5; }
-                        100% { opacity: 1; }
-                    }
-                `}
-            </style>
-            <Dialog 
-                open={open} 
-                onClose={handleClose}
-                maxWidth="md"
-                fullWidth
-                PaperProps={{
-                    sx: {
-                        borderRadius: 2,
-                        maxHeight: '80vh'
-                    }
-                }}
-                BackdropProps={{
-                    sx: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                        backdropFilter: 'blur(4px)'
-                    }
-                }}
-            >
+        <Dialog 
+            open={open} 
+            onClose={handleClose}
+            maxWidth="md"
+            fullWidth
+            PaperProps={{
+                sx: {
+                    borderRadius: 2,
+                    maxHeight: '80vh'
+                }
+            }}
+            BackdropProps={{
+                sx: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    backdropFilter: 'blur(4px)'
+                }
+            }}
+        >
             <DialogTitle sx={{ 
                 display: 'flex', 
                 justifyContent: 'space-between', 
@@ -347,18 +215,6 @@ const ModalSubirFotos = ({ open, onClose, fotos, onFotosChange, subtipoSeleccion
             </DialogTitle>
 
             <DialogContent sx={{ pt: 1 }}>
-                {/* Tabs para seleccionar modo */}
-                {permiteVideo && (
-                    <Tabs 
-                        value={activeTab} 
-                        onChange={(e, newValue) => setActiveTab(newValue)}
-                        sx={{ mb: 2 }}
-                    >
-                        <Tab label="Subir archivos" />
-                        <Tab label="Grabar video" />
-                    </Tabs>
-                )}
-
                 {/* Información */}
                 <Alert severity="info" sx={{ mb: 2, fontSize: '0.875rem' }}>
                     • Máximo {MAX_FOTOS} archivos, 10 MB por archivo, formatos de imagen: JPG, PNG, GIF, WEBP.
@@ -394,183 +250,53 @@ const ModalSubirFotos = ({ open, onClose, fotos, onFotosChange, subtipoSeleccion
                     </Box>
                 )}
 
-                {/* Contenido según la pestaña activa */}
-                {activeTab === 0 ? (
-                    // Pestaña: Subir archivos
-                    <Box
-                        sx={{
-                            border: '2px dashed #ccc',
-                            borderRadius: 2,
-                            p: 3,
-                            textAlign: 'center',
-                            mb: 3,
-                            backgroundColor: fotos.length >= MAX_FOTOS ? '#f5f5f5' : '#fafafa',
-                            cursor: fotos.length >= MAX_FOTOS ? 'not-allowed' : 'pointer',
-                            '&:hover': {
-                                borderColor: fotos.length >= MAX_FOTOS ? '#ccc' : '#1976d2',
-                                backgroundColor: fotos.length >= MAX_FOTOS ? '#f5f5f5' : '#f0f7ff'
-                            }
-                        }}
-                        onClick={() => {
-                            if (fotos.length < MAX_FOTOS && !loading) {
-                                fileInputRef.current?.click();
-                            }
-                        }}
-                    >
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileSelect}
-                            multiple
-                            accept={permiteVideo ? "image/*,video/*" : "image/*"}
-                            style={{ display: 'none' }}
-                            disabled={fotos.length >= MAX_FOTOS || loading}
-                        />
-                        
-                        <CloudUpload sx={{ fontSize: 48, color: '#ccc', mb: 1 }} />
-                        <Typography variant="body1" sx={{ mb: 1 }}>
-                            {fotos.length >= MAX_FOTOS 
-                                ? 'Límite de archivos alcanzado' 
-                                : 'Haz clic aquí o arrastra los archivos'
-                            }
+                {/* Área de subida de archivos */}
+                <Box
+                    sx={{
+                        border: '2px dashed #ccc',
+                        borderRadius: 2,
+                        p: 3,
+                        textAlign: 'center',
+                        mb: 3,
+                        backgroundColor: fotos.length >= MAX_FOTOS ? '#f5f5f5' : '#fafafa',
+                        cursor: fotos.length >= MAX_FOTOS ? 'not-allowed' : 'pointer',
+                        '&:hover': {
+                            borderColor: fotos.length >= MAX_FOTOS ? '#ccc' : '#1976d2',
+                            backgroundColor: fotos.length >= MAX_FOTOS ? '#f5f5f5' : '#f0f7ff'
+                        }
+                    }}
+                    onClick={() => {
+                        if (fotos.length < MAX_FOTOS && !loading) {
+                            fileInputRef.current?.click();
+                        }
+                    }}
+                >
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileSelect}
+                        multiple
+                        accept={permiteVideo ? "image/*,video/*" : "image/*"}
+                        style={{ display: 'none' }}
+                        disabled={fotos.length >= MAX_FOTOS || loading}
+                    />
+                    
+                    <CloudUpload sx={{ fontSize: 48, color: '#ccc', mb: 1 }} />
+                    <Typography variant="body1" sx={{ mb: 1 }}>
+                        {fotos.length >= MAX_FOTOS 
+                            ? 'Límite de archivos alcanzado' 
+                            : 'Haz clic aquí o arrastra los archivos'
+                        }
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        {fotos.length < MAX_FOTOS && `Puedes agregar ${MAX_FOTOS - fotos.length} archivo(s) más`}
+                    </Typography>
+                    {permiteVideo && (
+                        <Typography variant="body2" color="primary" sx={{ mt: 1, fontWeight: 600 }}>
+                            Videos permitidos para este subtipo
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            {fotos.length < MAX_FOTOS && `Puedes agregar ${MAX_FOTOS - fotos.length} archivo(s) más`}
-                        </Typography>
-                        {permiteVideo && (
-                            <Typography variant="body2" color="primary" sx={{ mt: 1, fontWeight: 600 }}>
-                                Videos permitidos para este subtipo
-                            </Typography>
-                        )}
-                    </Box>
-                ) : (
-                    // Pestaña: Grabar video
-                    <Box sx={{ mb: 3 }}>
-                        {/* Vista previa de la cámara */}
-                        {mediaStream && (
-                            <Box sx={{ 
-                                border: '2px solid #ddd', 
-                                borderRadius: 2, 
-                                overflow: 'hidden', 
-                                mb: 2,
-                                position: 'relative'
-                            }}>
-                                <video
-                                    ref={videoRef}
-                                    autoPlay
-                                    muted
-                                    style={{
-                                        width: '100%',
-                                        height: '300px',
-                                        objectFit: 'cover'
-                                    }}
-                                />
-                                {isRecording && (
-                                    <Box sx={{
-                                        position: 'absolute',
-                                        top: 10,
-                                        right: 10,
-                                        backgroundColor: 'red',
-                                        color: 'white',
-                                        borderRadius: '50%',
-                                        width: 20,
-                                        height: 20,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        animation: 'pulse 1s infinite'
-                                    }}>
-                                        <Box sx={{
-                                            width: 8,
-                                            height: 8,
-                                            backgroundColor: 'white',
-                                            borderRadius: '50%'
-                                        }} />
-                                    </Box>
-                                )}
-                            </Box>
-                        )}
-
-                        {/* Controles de grabación */}
-                        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
-                            {!mediaStream ? (
-                                <Button
-                                    variant="contained"
-                                    startIcon={<CameraAlt />}
-                                    onClick={startCamera}
-                                    disabled={loading}
-                                >
-                                    Abrir Cámara
-                                </Button>
-                            ) : (
-                                <>
-                                    {!isRecording ? (
-                                        <Button
-                                            variant="contained"
-                                            color="error"
-                                            startIcon={<VideoCall />}
-                                            onClick={startRecording}
-                                            disabled={loading}
-                                        >
-                                            Iniciar Grabación
-                                        </Button>
-                                    ) : (
-                                        <Button
-                                            variant="contained"
-                                            color="secondary"
-                                            onClick={stopRecording}
-                                            disabled={loading}
-                                        >
-                                            Detener Grabación
-                                        </Button>
-                                    )}
-                                    <Button
-                                        variant="outlined"
-                                        onClick={stopCamera}
-                                        disabled={isRecording || loading}
-                                    >
-                                        Cerrar Cámara
-                                    </Button>
-                                </>
-                            )}
-                        </Box>
-
-                        {/* Video grabado */}
-                        {recordedBlob && (
-                            <Box sx={{ mt: 2, p: 2, border: '1px solid #ddd', borderRadius: 2 }}>
-                                <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                                    Video grabado:
-                                </Typography>
-                                <video
-                                    src={URL.createObjectURL(recordedBlob)}
-                                    controls
-                                    style={{
-                                        width: '100%',
-                                        maxHeight: '200px',
-                                        objectFit: 'contain'
-                                    }}
-                                />
-                                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                                    <Button
-                                        variant="contained"
-                                        size="small"
-                                        onClick={saveRecordedVideo}
-                                        disabled={loading}
-                                    >
-                                        Guardar Video
-                                    </Button>
-                                    <Button
-                                        variant="outlined"
-                                        size="small"
-                                        onClick={() => setRecordedBlob(null)}
-                                    >
-                                        Descartar
-                                    </Button>
-                                </Box>
-                            </Box>
-                        )}
-                    </Box>
-                )}
+                    )}
+                </Box>
 
                 {/* Vista previa de archivos */}
                 {fotos.length > 0 && (
@@ -689,7 +415,6 @@ const ModalSubirFotos = ({ open, onClose, fotos, onFotosChange, subtipoSeleccion
                 </Button>
             </DialogActions>
         </Dialog>
-        </>
     );
 };
 

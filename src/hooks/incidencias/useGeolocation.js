@@ -159,7 +159,7 @@ const useGeolocation = () => {
             async (position) => {
                 const { latitude, longitude, accuracy } = position.coords;
                 
-                console.log('✅ Ubicación obtenida:', { 
+                console.log('Ubicación obtenida:', { 
                     latitude, 
                     longitude, 
                     accuracy: Math.round(accuracy) + 'm' 

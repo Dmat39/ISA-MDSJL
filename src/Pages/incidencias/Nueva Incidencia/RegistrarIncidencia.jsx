@@ -10,6 +10,7 @@ import useUserData from '../../../hooks/auth/useUserData';
 import useEnviarPreincidencia from '../../../hooks/incidencias/useEnviarPreincidencia';
 import MapModal from '../../../Components/General/MapModal';
 import ModalSubirFotos from './ModalSubirFotos';
+import { useNavigate } from 'react-router';
 
 const RegistrarIncidencia = () => {
     const { tiposCasos, loading: loadingTipos, error: errorTipos } = useTiposCasos();
@@ -17,6 +18,7 @@ const RegistrarIncidencia = () => {
     const { obtenerJurisdiccionActual, detectarJurisdiccion, jurisdicciones, loading: loadingJurisdiccion, error: errorJurisdiccion } = useJurisdiccionDetection();
     const { userData, loading: loadingUser, error: errorUser } = useUserData();
     const { enviarPreincidencia, loading: loadingEnvio, error: errorEnvio } = useEnviarPreincidencia();
+    const navigate = useNavigate();
 
     const [formData, setFormData] = useState({
         tipo: '',
@@ -184,6 +186,9 @@ const RegistrarIncidencia = () => {
 
             console.log('Resultado:', resultado);
 
+            // Redirigir a la lista
+            navigate('/', { replace: true });
+
         } catch (error) {
             console.error('Error al enviar incidencia:', error);
             setSnackbar({
@@ -255,7 +260,7 @@ const RegistrarIncidencia = () => {
                 const jurisdiccionEncontrada = detectarJurisdiccion(newLocation.latitude, newLocation.longitude);
 
                 if (jurisdiccionEncontrada) {
-                    console.log('✅ Nueva jurisdicción detectada:', jurisdiccionEncontrada);
+                    /* console.log('✅ Nueva jurisdicción detectada:', jurisdiccionEncontrada); */
                     setJurisdiccionDetectada(jurisdiccionEncontrada);
 
                     setFormData(prev => ({
@@ -508,6 +513,7 @@ const RegistrarIncidencia = () => {
                                     }
                                 }
                             }}
+                            format="DD/MM/YYYY"
                             maxDate={dayjsConZona()} // Solo permite hasta hoy
                             slotProps={{
                                 textField: {
@@ -515,7 +521,10 @@ const RegistrarIncidencia = () => {
                                     fullWidth: true,
                                     className: 'bg-gray-50',
                                     sx: { '& .MuiInputBase-input': { fontSize: '0.775rem' } },
-                                    helperText: 'Solo fechas pasadas y presente'
+                                    /* helperText: 'Solo fechas pasadas y presente', */
+                                    inputProps: {
+                                        placeholder: 'DD/MM/YYYY'
+                                    }
                                 }
                             }}
                         />
@@ -554,15 +563,19 @@ const RegistrarIncidencia = () => {
                                 
                                 handleInputChange('horaIncidente', time);
                             }}
+                            format="HH:mm"
                             slotProps={{
                                 textField: {
                                     size: 'small',
                                     fullWidth: true,
                                     className: 'bg-gray-50',
                                     sx: { '& .MuiInputBase-input': { fontSize: '0.775rem' } },
-                                    helperText: formData.fechaIncidente?.isSame(dayjsConZona(), 'day') 
+                                    /* helperText: formData.fechaIncidente?.isSame(dayjsConZona(), 'day') 
                                         ? 'Solo hasta la hora actual' 
-                                        : 'Seleccione la hora'
+                                        : 'Seleccione la hora', */
+                                    inputProps: {
+                                        placeholder: 'HH:MM'
+                                    }
                                 }
                             }}
                         />
@@ -644,7 +657,7 @@ const RegistrarIncidencia = () => {
                         <div className="mt-1 p-2 bg-green-50 border border-green-200 rounded-md">
                             <div className="flex items-center justify-between">
                                 <div className="text-xs text-green-700">
-                                    <span className="font-medium">Ubicación:</span>
+                                    <span className="font-medium">Ubicación registrada:</span>
                                     <span className="ml-1">
                                         {coordenadasSeleccionadas.latitud.toFixed(6)}, {coordenadasSeleccionadas.longitud.toFixed(6)}
                                     </span>

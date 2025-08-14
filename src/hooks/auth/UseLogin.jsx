@@ -9,7 +9,7 @@ export const useLogin = (credentials) => {
         })
 
         const response = await axios.post(
-            `${import.meta.env.VITE_APP_ENDPOINT}/api/auth/login/web`,
+            `${import.meta.env.VITE_APP_ENDPOINT}/api/auth/web`,
             formData,
             {
                 signal,

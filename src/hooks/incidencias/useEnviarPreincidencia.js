@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useQueryClient } from '@tanstack/react-query';
+import { incidenceApi } from '../../utils/axiosConfig';
 
 const useEnviarPreincidencia = () => {
     const [loading, setLoading] = useState(false);
@@ -103,21 +104,10 @@ const useEnviarPreincidencia = () => {
                 console.error('ADVERTENCIA: Se esperaban archivos pero no se encontraron en FormData');
             }
 
-            const response = await fetch(`${import.meta.env.VITE_APP_ENDPOINT_PRUEBA}preincidencias/`, {
-                method: 'POST',
-                headers: {
-                    // 'Authorization': `Bearer ${token}` // Comentado temporalmente
-
-                },
-                body: formData
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
-            }
-
-            const result = await response.json();
+            const { data: result } = await incidenceApi.post(
+                '/api/preincidencias/',
+                formData
+            );
             
             // Invalidar cache de preincidencias después del envío exitoso
             console.log('✅ Incidencia enviada exitosamente, invalidando cache...');

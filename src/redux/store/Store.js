@@ -4,6 +4,7 @@ import storage from 'redux-persist/lib/storage';
 import { createStateSyncMiddleware, initMessageListener } from 'redux-state-sync';
 import AuthSlice from '../slices/AuthSlice';
 import uiSlice from '../slices/uiSlice';  
+import { clearToken, setToken } from '../../utils/axiosConfig';
 import { encryptTransform } from '../../utils/encryptUtils';
 
 // Persistencia de auth con encriptación
@@ -36,6 +37,17 @@ export const store = configureStore({
 });
 
 export const persistor = persistStore(store);
+
+// Sincroniza el token global con la rehidratación del store
+persistor.subscribe(() => {
+  const state = store.getState();
+  const token = state?.auth?.token;
+  if (token) {
+    setToken(token);
+  } else {
+    clearToken();
+  }
+});
 
 // Habilita la escucha entre pestañas
 initMessageListener(store);

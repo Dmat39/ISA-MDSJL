@@ -166,7 +166,11 @@ const FaceVerification = () => {
 
     useEffect(() => {
         if (data) {
-            dispatch(setUser(data.data));
+            // Guardar tanto el token como los datos del usuario
+            dispatch(setUser({
+                token: data.token,
+                data: data.data
+            }));
         }
     }, [data])
 

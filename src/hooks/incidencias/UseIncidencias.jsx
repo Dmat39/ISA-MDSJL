@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import { incidenceApi } from '../../utils/axiosConfig';
 import { useSelector } from 'react-redux';
 
 const UseIncidencias = ({ inicio, fin, estado }) => {
@@ -25,32 +25,17 @@ const UseIncidencias = ({ inicio, fin, estado }) => {
             throw new Error(`ID del sereno no encontrado. Usuario actual: ${JSON.stringify(user, null, 2)}`);
         }
         
-        if (!import.meta.env.VITE_APP_ENDPOINT_PRUEBA) {
-            throw new Error('Variable de entorno VITE_APP_ENDPOINT_PRUEBA no configurada. Verifica tu archivo .env');
-        }
+        // Construir ruta relativa para que `baseURL` y el interceptor con token funcionen
+        const endpointPath = `/api/preincidencias/sereno/${user.id_sereno}`;
 
-        const baseUrl = `${import.meta.env.VITE_APP_ENDPOINT_PRUEBA}preincidencias/sereno/${user.id_sereno}`;
-
-        const params = new URLSearchParams();
-
-        if (inicio) params.append("fecha_inicio", inicio);
-        if (fin) params.append("fecha_fin", fin);
-        if (estado) params.append("estado", estado);
-
-        const url = `${baseUrl}?${params.toString()}`;
-        
-        console.log('URL de solicitud:', url);
-        console.log('Parámetros:', { inicio, fin, estado });
-
-        const response = await axios.get(
-            url,
-            {
-                signal,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            }
-        )
+        const response = await incidenceApi.get(endpointPath, {
+            signal,
+            params: {
+                ...(inicio ? { fecha_inicio: inicio } : {}),
+                ...(fin ? { fecha_fin: fin } : {}),
+                ...(estado ? { estado } : {}),
+            },
+        })
         
         console.log('Respuesta recibida:', response.data);
         return response.data
