@@ -26,7 +26,7 @@ const UseIncidencias = ({ inicio, fin, estado }) => {
         }
         
         // Construir ruta relativa para que `baseURL` y el interceptor con token funcionen
-        const endpointPath = `/api/preincidencias/sereno/${user.id_sereno}`;
+        const endpointPath = `preincidencias/sereno/${user.id_sereno}`;
 
         const response = await incidenceApi.get(endpointPath, {
             signal,

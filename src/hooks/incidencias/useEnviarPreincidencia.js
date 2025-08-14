@@ -105,7 +105,7 @@ const useEnviarPreincidencia = () => {
             }
 
             const { data: result } = await incidenceApi.post(
-                '/api/preincidencias/',
+                'preincidencias/',
                 formData
             );
             

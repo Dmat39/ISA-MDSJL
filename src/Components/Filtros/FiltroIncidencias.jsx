@@ -36,7 +36,7 @@ const FiltroIncidencias = ({ iconButtonStyle, inicio, setInicio, fin, setFin, es
         if (!phone) return;
         try {
             setSavingPhone(true);
-            await incidenceApi.patch('/api/serenos/phone', { celular: phone });
+            await incidenceApi.patch('serenos/phone', { celular: phone });
             dispatch(setUser({ token, data: { ...user, celular: phone } }));
             toast.success('Número de celular actualizado');
         } catch (err) {
