@@ -21,13 +21,13 @@ export const clearToken = () => {
 // Configuración base para la API principal
 const config = axios.create({
   baseURL: import.meta.env.VITE_APP_ENDPOINT,
-  timeout: 10000,
+  timeout: 60000,
 });
 
 // Configuración específica para el endpoint de incidencias
 const incidenceConfig = axios.create({
   baseURL: import.meta.env.VITE_APP_ENDPOINT_PRUEBA,
-  timeout: 10000,
+  timeout: 60000,
 });
 
 // Función para agregar el token de autenticación
@@ -52,7 +52,7 @@ incidenceConfig.interceptors.request.use(addAuthToken, (error) => {
   return Promise.reject(error);
 });
 
-// Interceptor para manejar respuestas de error (401 - Unauthorized)
+// Interceptor para manejar respuestas de error 
 const handleResponseError = (error) => {
   if (error.response?.status === 401) {
     console.warn('Token expirado o inválido. Limpiando token global...');
@@ -61,6 +61,20 @@ const handleResponseError = (error) => {
     if (window.location.pathname !== '/verificacion') {
       window.location.href = '/verificacion';
     }
+  } else if (error.response?.status === 400) {
+    console.error('❌ Error 400 - Bad Request:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      data: error.config?.data,
+      response: error.response?.data,
+      message: error.message
+    });
+  } else if (error.response?.status >= 500) {
+    console.error('❌ Error del servidor:', {
+      status: error.response?.status,
+      url: error.config?.url,
+      message: error.message
+    });
   }
   return Promise.reject(error);
 };

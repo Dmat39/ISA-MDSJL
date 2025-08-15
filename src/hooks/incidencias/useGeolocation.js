@@ -149,7 +149,7 @@ const useGeolocation = () => {
         // Configuración optimizada para iOS
         const options = {
             enableHighAccuracy: true,
-            timeout: 15000, // 15 segundos para iOS
+            timeout: 20000, // 20 segundos para iOS
             maximumAge: 60000 // 1 minuto de cache
         };
 
@@ -185,9 +185,9 @@ const useGeolocation = () => {
                         address: detailedAddress
                     }));
                     
-                    console.log('✅ Dirección actualizada:', detailedAddress);
+                    console.log('Dirección actualizada:', detailedAddress);
                 } catch (addressError) {
-                    console.warn('⚠️ Error obteniendo dirección:', addressError);
+                    console.warn('Error obteniendo dirección:', addressError);
                     // Mantener coordenadas pero con dirección fallback
                     setLocation(prev => ({
                         ...prev,

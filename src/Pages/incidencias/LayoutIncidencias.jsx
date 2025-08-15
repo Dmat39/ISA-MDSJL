@@ -1,12 +1,12 @@
 import { Button, ToggleButton, ToggleButtonGroup, Tooltip } from '@mui/material'
-import { Filter, List, MapIcon } from 'lucide-react';
+import { Filter, List } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import ListaIncidencias from './ListaIncidencias';
 import UseIncidencias from '../../hooks/incidencias/UseIncidencias';
 import { dayjsConZona } from '../../utils/dayjsConfig';
 import FiltroIncidencias from '../../Components/Filtros/FiltroIncidencias';
 import { usePersistedState } from '../../hooks/LocalStorage/UsePersistState';
-import MapaIncidencias from './MapaIncidencias';
+// import MapaIncidencias from './MapaIncidencias';
 
 const LayoutIncidencias = () => {
     const [view, setView] = useState('list');
@@ -54,26 +54,20 @@ const LayoutIncidencias = () => {
                             setEstado={setEstado}
                             refetch={refetch}
                         />
+                        {/* Botones de cambio de vista deshabilitados */}
                         <ToggleButtonGroup
                             value={view}
                             exclusive
                             onChange={handleViewChange}
                             size="small"
+                            style={{ display: 'none' }}
                         >
                             <Tooltip title="Lista" arrow>
                                 <ToggleButton
                                     value="list"
-                                    style={toggleStyle(view === 'list', '8px 0 0 8px')}
+                                    style={toggleStyle(true, '8px 0 0 8px')}
                                 >
                                     <List className="w-4 h-4" />
-                                </ToggleButton>
-                            </Tooltip>
-                            <Tooltip title="Mapa" arrow>
-                                <ToggleButton
-                                    value="map"
-                                    style={toggleStyle(view === 'map', '0 8px 8px 0')}
-                                >
-                                    <MapIcon className="w-4 h-4" />
                                 </ToggleButton>
                             </Tooltip>
                         </ToggleButtonGroup>
@@ -118,12 +112,7 @@ const LayoutIncidencias = () => {
                 }
 
 
-                {
-                    view === 'map' &&
-                    <MapaIncidencias
-                        data={data?.data || []}
-                    />
-                }
+                {/** Vista de mapa deshabilitada */}
             </div>
         </div>
     )

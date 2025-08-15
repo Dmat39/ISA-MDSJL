@@ -40,7 +40,8 @@ const Navbar = () => {
       localStorage.removeItem('user');
       localStorage.removeItem('token');
       localStorage.removeItem('auth');
-      localStorage.removeItem('persist:root');
+      // Clave real usada por redux-persist para el slice auth
+      localStorage.removeItem('persist:auth');
       sessionStorage.clear();
       
       // Limpiar cualquier cache del navegador relacionado

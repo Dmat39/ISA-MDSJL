@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, FormControl, MenuItem, Select, TextField, CircularProgress, Alert, Snackbar } from '@mui/material';
+import { Button, FormControl, MenuItem, Select, TextField, CircularProgress, Alert, Snackbar, LinearProgress } from '@mui/material';
 import { DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { MapPin, Plus, Loader, Navigation } from 'lucide-react';
 import { dayjsConZona } from '../../../utils/dayjsConfig';
@@ -41,6 +41,8 @@ const RegistrarIncidencia = () => {
     const [jurisdiccionDetectada, setJurisdiccionDetectada] = useState(null);
     const [fotosModalOpen, setFotosModalOpen] = useState(false);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+    const [descripcionError, setDescripcionError] = useState('');
+    const [progress, setProgress] = useState(0);
 
     // Obtener subtipos basados en el tipo seleccionado
     const getSubtipos = () => {
@@ -88,6 +90,23 @@ const RegistrarIncidencia = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Iniciar progreso
+        setProgress(0);
+        const progressInterval = setInterval(() => {
+            setProgress(prev => {
+                if (prev >= 90) {
+                    clearInterval(progressInterval);
+                    return 90;
+                }
+                return prev + 10;
+            });
+        }, 200);
+
+        // Limpiar el intervalo al finalizar (éxito o error)
+        const cleanupProgress = () => {
+            clearInterval(progressInterval);
+        };
 
         // Validaciones básicas
         if (!formData.tipo || !formData.subtipo) {
@@ -103,6 +122,15 @@ const RegistrarIncidencia = () => {
             setSnackbar({
                 open: true,
                 message: 'Por favor ingresa una descripción',
+                severity: 'error'
+            });
+            return;
+        }
+
+        if (formData.descripcion.trim().length < 10) {
+            setSnackbar({
+                open: true,
+                message: 'La descripción debe de ser más detallada',
                 severity: 'error'
             });
             return;
@@ -164,6 +192,17 @@ const RegistrarIncidencia = () => {
 
             const resultado = await enviarPreincidencia(datosEnvio, userData, jurisdiccionId);
 
+            // Limpiar el intervalo de progreso
+            cleanupProgress();
+
+            // Completar progreso al 100%
+            setProgress(100);
+            
+            // Esperar un momento para mostrar el progreso completo
+            setTimeout(() => {
+                setProgress(0);
+            }, 1000);
+
             setSnackbar({
                 open: true,
                 message: 'Incidencia registrada exitosamente',
@@ -191,6 +230,13 @@ const RegistrarIncidencia = () => {
 
         } catch (error) {
             console.error('Error al enviar incidencia:', error);
+            
+            // Limpiar el intervalo de progreso
+            cleanupProgress();
+            
+            // Resetear progreso en caso de error
+            setProgress(0);
+            
             setSnackbar({
                 open: true,
                 message: error.message || 'Error al registrar la incidencia',
@@ -809,7 +855,7 @@ const RegistrarIncidencia = () => {
                         className="bg-gray-50"
                         placeholder="Describa detalladamente el incidente..."
                         sx={{ '& .MuiInputBase-input': { fontSize: '0.875rem' } }}
-                    />
+                    />              
                 </div>
 
                 {/* Fotos */}
@@ -866,7 +912,29 @@ const RegistrarIncidencia = () => {
                 </div>
 
                 {/* Botón Registrar */}
-                <div className="pt-2">
+                <div className="pt-0">
+                    {/* Barra de progreso */}
+                    {loadingEnvio && (
+                        <div className="mb-1">
+                            <LinearProgress 
+                                variant="determinate" 
+                                value={progress} 
+                                sx={{
+                                    height: 6,
+                                    borderRadius: 3,
+                                    backgroundColor: '#e5e7eb',
+                                    '& .MuiLinearProgress-bar': {
+                                        backgroundColor: '#22c55e',
+                                        borderRadius: 3
+                                    }
+                                }}
+                            />
+                            <div className="text-center text-xs text-gray-600 mt-0">
+                                Enviando incidencia... {progress}%
+                            </div>
+                        </div>
+                    )}
+                    
                     <Button
                         type="submit"
                         variant="contained"
@@ -925,7 +993,7 @@ const RegistrarIncidencia = () => {
                     severity={snackbar.severity}
                     sx={{ width: '100%' }}
                 >
-                    {snackbar.message}
+                      {"Tiempo de envio superado, por favor verifique su conexión a internet."}
                 </Alert>
             </Snackbar>
         </div>

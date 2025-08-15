@@ -105,7 +105,7 @@ const useEnviarPreincidencia = () => {
             }
 
             const { data: result } = await incidenceApi.post(
-                'preincidencias/',
+                '/api/preincidencias/',
                 formData
             );
             
@@ -119,7 +119,28 @@ const useEnviarPreincidencia = () => {
 
         } catch (err) {
             console.error('Error enviando preincidencia:', err);
-            setError(err.message);
+            
+            // Manejo específico de errores HTTP
+            if (err.response) {
+                const { status, data } = err.response;
+                console.error('Detalles del error:', { status, data });
+                
+                if (status === 400) {
+                    setError(`Error de validación: ${data?.message || 'Datos del formulario incorrectos'}`);
+                } else if (status === 401) {
+                    setError('No autorizado. Por favor, inicie sesión nuevamente.');
+                } else if (status >= 500) {
+                    setError('Error del servidor. Por favor, intente más tarde.');
+                } else {
+                    setError(`Error ${status}: ${data?.message || err.message}`);
+                }
+            } else if (err.request) {
+                console.error('Error de red:', err.request);
+                setError('Error de conexión 📡. Verifique su conexión a internet.');
+            } else {
+                setError(err.message || 'Error desconocido');
+            }
+            
             throw err;
         } finally {
             setLoading(false);
