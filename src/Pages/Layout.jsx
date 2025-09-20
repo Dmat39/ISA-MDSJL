@@ -5,7 +5,7 @@ const Layout = () => {
     return (
         <div className='h-screen w-full flex flex-col bg-gray-50 relative'>
             {/* Main content - scrollable area */}
-            <main className='flex-1 overflow-y-auto pb-20'>
+            <main className='flex-1 overflow-y-auto pb-10'>
                 <div className='min-h-full w-full'>
                     <Outlet />
                 </div>

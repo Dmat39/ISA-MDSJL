@@ -1,55 +1,15 @@
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
-import { persistStore, persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist';
-import storage from 'redux-persist/lib/storage';
-import { createStateSyncMiddleware, initMessageListener } from 'redux-state-sync';
 import AuthSlice from '../slices/AuthSlice';
-import uiSlice from '../slices/uiSlice';  
-import { clearToken, setToken } from '../../utils/axiosConfig';
-import { encryptTransform } from '../../utils/encryptUtils';
+import uiSlice from '../slices/uiSlice';
 
-// Persistencia de auth con encriptación
-const authPersistConfig = {
-  key: 'auth',
-  storage,
-  transforms: [encryptTransform],
-};
-
-
-// Reducer combinado con persistencias individuales
+// Reducer combinado simple
 const rootReducer = combineReducers({
-  auth: persistReducer(authPersistConfig, AuthSlice),
-  ui: uiSlice, // ui no se persiste ni sincroniza
-});
-
-// Middleware de sincronización solo para auth
-const stateSyncMiddleware = createStateSyncMiddleware({
-  predicate: (action) => action.type.startsWith('auth/'),
+  auth: AuthSlice,
+  ui: uiSlice,
 });
 
 export const store = configureStore({
   reducer: rootReducer,
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
-      },
-    }).concat(stateSyncMiddleware),
 });
-
-export const persistor = persistStore(store);
-
-// Sincroniza el token global con la rehidratación del store
-persistor.subscribe(() => {
-  const state = store.getState();
-  const token = state?.auth?.token;
-  if (token) {
-    setToken(token);
-  } else {
-    clearToken();
-  }
-});
-
-// Habilita la escucha entre pestañas
-initMessageListener(store);
 
 export default store;

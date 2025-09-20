@@ -86,6 +86,14 @@ const RegistrarIncidencia = () => {
             ...prev,
             [field]: value
         }));
+        // Validación específica para descripción
+        if (field === 'descripcion') {
+            if (value.length < 10 && value.length > 0) {
+                setDescripcionError('Introduzca correctamente la descripción');
+            } else {
+                setDescripcionError('');
+            }
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -237,9 +245,18 @@ const RegistrarIncidencia = () => {
             // Resetear progreso en caso de error
             setProgress(0);
             
+            // Manejo específico de errores de timeout
+            let errorMessage = 'Error al registrar la incidencia';
+            
+            if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+                errorMessage = 'Tiempo de envío superado, por favor verifique su conexión a internet.';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            
             setSnackbar({
                 open: true,
-                message: error.message || 'Error al registrar la incidencia',
+                message: errorMessage,
                 severity: 'error'
             });
         }
@@ -929,8 +946,8 @@ const RegistrarIncidencia = () => {
                                     }
                                 }}
                             />
-                            <div className="text-center text-xs text-gray-600 mt-0">
-                                Enviando incidencia... {progress}%
+                            <div className="text-center text-xs text-gray-600 mt-1">
+                                {progress < 90 ? `Enviando incidencia... ${progress}%` : 'Procesando datos, por favor espere...'}
                             </div>
                         </div>
                     )}
@@ -993,7 +1010,7 @@ const RegistrarIncidencia = () => {
                     severity={snackbar.severity}
                     sx={{ width: '100%' }}
                 >
-                      {"Tiempo de envio superado, por favor verifique su conexión a internet."}
+                    {snackbar.message}
                 </Alert>
             </Snackbar>
         </div>

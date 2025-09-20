@@ -1,15 +1,16 @@
-import React, { cloneElement } from 'react';
+import React from 'react';
 import { useSelector } from 'react-redux';
-import { Navigate, useLocation } from 'react-router';
+import { Navigate } from 'react-router';
 //import Error403 from '../Pages/Error403';
 
 
 const PrivateRouter = ({ element }) => {
+    const { user, token } = useSelector((state) => state.auth);
 
-    const { user } = useSelector((state) => state.auth);
-
-    if (!user) {
-        return <Navigate to="/verificacion" />;
+    // Verificar si hay usuario y token válidos
+    if (!user || !token) {
+        console.log('PrivateRouter: No hay usuario o token válido, redirigiendo a /verificacion');
+        return <Navigate to="/verificacion" replace />;
     }
 
     // if (!hasPermission) {

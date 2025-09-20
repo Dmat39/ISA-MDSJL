@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { handleResponseError } from './axiosInterceptors';
 
 // Variable global para almacenar el token
 let globalToken = null;
@@ -27,7 +28,7 @@ const config = axios.create({
 // Configuración específica para el endpoint de incidencias
 const incidenceConfig = axios.create({
   baseURL: import.meta.env.VITE_APP_ENDPOINT_PRUEBA,
-  timeout: 60000,
+  timeout: 70000, // Aumentado a 70 segundos para dar más tiempo al envío
 });
 
 // Función para agregar el token de autenticación
@@ -52,32 +53,9 @@ incidenceConfig.interceptors.request.use(addAuthToken, (error) => {
   return Promise.reject(error);
 });
 
-// Interceptor para manejar respuestas de error 
-const handleResponseError = (error) => {
-  if (error.response?.status === 401) {
-    console.warn('Token expirado o inválido. Limpiando token global...');
-    clearToken();
-    // Redirigir al login si es necesario
-    if (window.location.pathname !== '/verificacion') {
-      window.location.href = '/verificacion';
-    }
-  } else if (error.response?.status === 400) {
-    console.error('❌ Error 400 - Bad Request:', {
-      url: error.config?.url,
-      method: error.config?.method,
-      data: error.config?.data,
-      response: error.response?.data,
-      message: error.message
-    });
-  } else if (error.response?.status >= 500) {
-    console.error('❌ Error del servidor:', {
-      status: error.response?.status,
-      url: error.config?.url,
-      message: error.message
-    });
-  }
-  return Promise.reject(error);
-};
+
+
+
 
 // Aplicar interceptor de respuesta a ambas configuraciones
 config.interceptors.response.use(

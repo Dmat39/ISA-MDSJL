@@ -152,7 +152,7 @@ const useGeolocation = () => {
             timeout: 20000, // 20 segundos para iOS
             maximumAge: 60000 // 1 minuto de cache
         };
-
+        
         console.log('📍 Solicitando ubicación con opciones:', options);
 
         navigator.geolocation.getCurrentPosition(

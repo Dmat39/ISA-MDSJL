@@ -1,15 +1,21 @@
 import { Button, ToggleButton, ToggleButtonGroup, Tooltip } from '@mui/material'
-import { Filter, List } from 'lucide-react';
+import { Filter, List, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
 import ListaIncidencias from './ListaIncidencias';
 import UseIncidencias from '../../hooks/incidencias/UseIncidencias';
 import { dayjsConZona } from '../../utils/dayjsConfig';
 import FiltroIncidencias from '../../Components/Filtros/FiltroIncidencias';
 import { usePersistedState } from '../../hooks/LocalStorage/UsePersistState';
+import ModalSerenos from '../../Components/Modals/ModalSerenos';
+import useRole from '../../hooks/useRole';
 // import MapaIncidencias from './MapaIncidencias';
 
 const LayoutIncidencias = () => {
+    const navigate = useNavigate();
+    const { canAccessHistorial } = useRole();
     const [view, setView] = useState('list');
+    const [modalSerenasOpen, setModalSerenasOpen] = useState(false);
 
     const defaultFecha = dayjsConZona().format('YYYY-MM-DD')
     const [inicio, setInicio] = usePersistedState('inicio', defaultFecha);
@@ -44,6 +50,18 @@ const LayoutIncidencias = () => {
                 <div className='flex items-center justify-between max-w-md container mx-auto'>
                     <h1 className="text-2xl font-bold text-gray-900">Incidencias</h1>
                     <div className="flex gap-2">
+                        {canAccessHistorial() && (
+                            <Tooltip title="Historial de Serenos" arrow>
+                                <Button
+                                    onClick={() => navigate('/historial')}
+                                    variant="outlined"
+                                    size="small"
+                                    style={iconButtonStyle()}
+                                >
+                                    <Users className="w-4 h-4" />
+                                </Button>
+                            </Tooltip>
+                        )}
                         <FiltroIncidencias
                             iconButtonStyle={iconButtonStyle}
                             inicio={inicio}
@@ -114,6 +132,12 @@ const LayoutIncidencias = () => {
 
                 {/** Vista de mapa deshabilitada */}
             </div>
+
+            {/* Modal de Serenos */}
+            <ModalSerenos
+                open={modalSerenasOpen}
+                onClose={() => setModalSerenasOpen(false)}
+            />
         </div>
     )
 }

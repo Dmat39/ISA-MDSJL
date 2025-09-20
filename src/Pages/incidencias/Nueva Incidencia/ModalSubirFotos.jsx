@@ -37,8 +37,11 @@ const ModalSubirFotos = ({ open, onClose, fotos, onFotosChange, subtipoSeleccion
     const MAX_VIDEO_SIZE_MB = 50; // MB para videos
     const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024;
     
-    const FORMATOS_PERMITIDOS = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    const FORMATOS_VIDEO_PERMITIDOS = ['video/mp4', 'video/mov', 'video/avi', 'video/wmv', 'video/quicktime', 'video/x-msvideo'];
+    const FORMATOS_PERMITIDOS = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heic', 'image/heif', 'image/bmp', 'image/tiff'];
+    const FORMATOS_VIDEO_PERMITIDOS = [
+        'video/mp4', 'video/mov', 'video/avi', 'video/wmv', 'video/quicktime', 'video/x-msvideo',
+        'video/3gpp', 'video/3gpp2', 'video/m4v', 'video/x-m4v', 'video/mp4v-es', 'video/x-ms-wmv'
+    ];
     
     // Verificar si el subtipo seleccionado permite videos
     const permiteVideo = subtipoSeleccionado && SUBTIPOS_CON_VIDEO.includes(parseInt(subtipoSeleccionado));
@@ -51,10 +54,25 @@ const ModalSubirFotos = ({ open, onClose, fotos, onFotosChange, subtipoSeleccion
         return FORMATOS_PERMITIDOS;
     };
 
+    // Función para validar archivos por extensión (útil para iOS)
+    const validarPorExtension = (filename) => {
+        const extension = filename.toLowerCase().split('.').pop();
+        const extensionesImagen = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        const extensionesVideo = ['mp4', 'mov', 'avi', 'wmv', '3gp', '3g2', 'm4v'];
+        
+        if (permiteVideo) {
+            return [...extensionesImagen, ...extensionesVideo].includes(extension);
+        }
+        return extensionesImagen.includes(extension);
+    };
+
     const validarArchivo = async (file) => {
-        // Validar tipo de archivo
+        // Validar tipo de archivo con fallback para iOS
         const formatosPermitidos = getFormatosPermitidos();
-        if (!formatosPermitidos.includes(file.type)) {
+        const tipoValido = formatosPermitidos.includes(file.type) || 
+                          (file.type === '' && validarPorExtension(file.name));
+        
+        if (!tipoValido) {
             return `El archivo ${file.name} no es un formato válido. Formatos permitidos: ${permiteVideo ? 'JPG, PNG, GIF, WEBP, MP4, AVI, MOV, WMV' : 'JPG, PNG, GIF, WEBP'}`;
         }
 
@@ -75,7 +93,9 @@ const ModalSubirFotos = ({ open, onClose, fotos, onFotosChange, subtipoSeleccion
                     return `El video ${file.name} excede la duración máxima de ${MAX_VIDEO_DURATION} segundos`;
                 }
             } catch (err) {
-                return `Error al validar la duración del video ${file.name}`;
+                console.warn(`No se pudo validar la duración del video ${file.name}:`, err);
+                // En iOS, a veces no se puede obtener la duración, continuamos sin validar
+                // return `Error al validar la duración del video ${file.name}`;
             }
         }
 
@@ -143,8 +163,18 @@ const ModalSubirFotos = ({ open, onClose, fotos, onFotosChange, subtipoSeleccion
             onFotosChange([...fotos, ...nuevosArchivos]);
             
         } catch (err) {
-            setError('Error al procesar los archivos');
-            console.error('Error:', err);
+            console.error('Error al procesar archivos:', err);
+            
+            // Manejo específico de errores para iOS
+            if (err.name === 'QuotaExceededError') {
+                setError('Error: El archivo es demasiado grande para procesar en este dispositivo.');
+            } else if (err.name === 'NotSupportedError') {
+                setError('Error: Formato de archivo no soportado en este dispositivo.');
+            } else if (err.message?.includes('timeout')) {
+                setError('Error: Tiempo de procesamiento agotado. Intente con archivos más pequeños.');
+            } else {
+                setError(`Error al procesar los archivos: ${err.message || 'Error desconocido'}`);
+            }
         } finally {
             setLoading(false);
             // Limpiar el input
@@ -155,10 +185,26 @@ const ModalSubirFotos = ({ open, onClose, fotos, onFotosChange, subtipoSeleccion
     };
 
     const crearPreview = (file) => {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const reader = new FileReader();
+            
             reader.onload = (e) => resolve(e.target.result);
-            reader.readAsDataURL(file);
+            reader.onerror = () => {
+                console.warn('Error al crear preview, usando fallback');
+                // Fallback para iOS: crear un preview básico
+                if (file.type.startsWith('video/')) {
+                    resolve('/placeholder-video.png'); // Placeholder para videos
+                } else {
+                    resolve('/placeholder-image.png'); // Placeholder para imágenes
+                }
+            };
+            
+            try {
+                reader.readAsDataURL(file);
+            } catch (error) {
+                console.warn('Error en FileReader, usando fallback:', error);
+                reject(error);
+            }
         });
     };
 
