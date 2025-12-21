@@ -7,7 +7,9 @@ let globalToken = null;
 // Función para actualizar el token globalmente
 export const setToken = (token) => {
   globalToken = token;
-  console.log('Token global actualizado:', token ? 'Sí' : 'No');
+  if (import.meta.env.DEV) {
+    console.log('Token global actualizado:', token ? 'Sí' : 'No');
+  }
 };
 
 // Función para obtener el token actual
@@ -16,7 +18,9 @@ export const getToken = () => globalToken;
 // Función para limpiar el token
 export const clearToken = () => {
   globalToken = null;
-  console.log('Token global limpiado');
+  if (import.meta.env.DEV) {
+    console.log('Token global limpiado');
+  }
 };
 
 // Configuración base para la API principal
@@ -35,21 +39,16 @@ const incidenceConfig = axios.create({
 const addAuthToken = (config) => {
   if (globalToken) {
     config.headers.Authorization = `Bearer ${globalToken}`;
-    console.log('Token agregado a petición:', config.url);
-  } else {
-    console.warn('No hay token disponible para:', config.url);
   }
   return config;
 };
 
 // Interceptor para agregar token automáticamente
 config.interceptors.request.use(addAuthToken, (error) => {
-  console.error('Error en interceptor de request (main):', error);
   return Promise.reject(error);
 });
 
 incidenceConfig.interceptors.request.use(addAuthToken, (error) => {
-  console.error('Error en interceptor de request (incidence):', error);
   return Promise.reject(error);
 });
 

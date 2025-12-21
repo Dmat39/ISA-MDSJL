@@ -23,24 +23,20 @@ const Navbar = () => {
   const handleLogout = () => {
     // Evitar múltiples clics
     if (isLoggingOut.current) {
-      console.log('Logout ya en progreso, ignorando clic adicional');
       return;
     }
 
     isLoggingOut.current = true;
-    console.log('Iniciando logout manual...');
 
     // Limpiar datos de Redux (esto también limpia localStorage)
     dispatch(clearUser());
 
-    // Navegar inmediatamente
-    console.log('Redirigiendo a /verificacion después del logout');
-    navigate('/verificacion', { replace: true });
-
-    // Reset del flag después de un tiempo
+    // Forzar navegación después de que Redux actualice
     setTimeout(() => {
-      isLoggingOut.current = false;
-    }, 1000);
+      navigate('/verificacion', { replace: true });
+      // Forzar recarga completa para limpiar cualquier estado residual
+      window.location.href = '/verificacion';
+    }, 100);
   };
 
   useEffect(() => {

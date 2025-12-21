@@ -9,13 +9,8 @@ const PrivateRouter = ({ element }) => {
 
     // Verificar si hay usuario y token válidos
     if (!user || !token) {
-        console.log('PrivateRouter: No hay usuario o token válido, redirigiendo a /verificacion');
         return <Navigate to="/verificacion" replace />;
     }
-
-    // if (!hasPermission) {
-    //     return <Error403 />;
-    // }
 
     return element;
 }

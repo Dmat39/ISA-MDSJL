@@ -39,11 +39,8 @@ const useSerenos = ({ searchTerm, fecha, turno, jurisdiccion, page = 1, limit = 
                 params.search = searchTerm.trim();
             }
 
-            // Debug: mostrar parámetros que se enviarán
-            console.log('Parámetros enviados al endpoint:', params);
-
             // Llamada a la API del endpoint /api/historial/titan
-            const response = await incidenceApi.get('/api/historial/titan', { params });
+            //const response = await incidenceApi.get('/api/historial/titan', { params });
 
             // Procesar los datos de la respuesta
             const historialData = response.data.historial || [];
@@ -60,7 +57,6 @@ const useSerenos = ({ searchTerm, fecha, turno, jurisdiccion, page = 1, limit = 
             setCount(response.data.totalCount || 0);
 
         } catch (err) {
-            console.error('Error fetching serenos:', err);
 
             // Manejar diferentes tipos de errores
             let errorMessage = 'Error al cargar los datos de serenos';

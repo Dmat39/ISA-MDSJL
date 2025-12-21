@@ -14,7 +14,7 @@ const loadInitialState = () => {
       return parsed;
     }
   } catch (error) {
-    console.warn('Error cargando estado de auth:', error);
+    // Error silencioso en producción
   }
   return {
     token: null,
@@ -47,7 +47,6 @@ const authSlice = createSlice({
     },
     // Nueva acción para manejar token expirado
     handleTokenExpired(state) {
-      console.warn('Token expirado - limpiando estado de autenticación');
       state.user = null;
       state.token = null;
       clearToken();

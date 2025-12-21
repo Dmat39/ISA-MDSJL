@@ -9,6 +9,15 @@ import store from './redux/store/Store'
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { setStore } from './utils/axiosInterceptors';
+import { initSecurityMeasures } from './utils/security';
+
+// Inicializar medidas de seguridad en producción
+initSecurityMeasures({
+  disableConsole: true, // Deshabilita console.log en producción
+  detectDevTools: false, // Detectar DevTools (opcional, puede ser molesto)
+  disableRightClick: false, // Deshabilitar clic derecho (opcional, afecta UX)
+  disableShortcuts: false, // Deshabilitar atajos de DevTools (opcional, afecta UX)
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {

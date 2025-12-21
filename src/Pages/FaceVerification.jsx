@@ -6,12 +6,14 @@ import { useEffect, useRef, useState } from 'react';
 import ActionButtons from '../Components/Verification/ActionButtons';
 import { toast } from 'sonner';
 import { useLogin } from '../hooks/auth/UseLogin';
+import { useUsernamePasswordLogin } from '../hooks/auth/UseUsernamePasswordLogin';
 import { useDispatch } from 'react-redux';
 import { setUser } from '../redux/slices/AuthSlice';
+import UsernamePasswordForm from '../Components/Verification/UsernamePasswordForm';
 
 
 const FaceVerification = () => {
-    const dispatch = useDispatch();  
+    const dispatch = useDispatch();
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const [cameraActive, setCameraActive] = useState(false);
@@ -19,7 +21,11 @@ const FaceVerification = () => {
     const [CanTakePhoto, setCanTakePhoto] = useState(false);
     const [Credentials, setCredentials] = useState({});
     const [facingMode, setFacingMode] = useState("environment"); // "environment" para trasera, "user" para frontal
+    const [loginMethod] = useState("username"); // Siempre será "username" - Login por defecto con usuario y contraseña
+    const [usernameCredentials, setUsernameCredentials] = useState({});
+
     const { refetch, data, error, isFetching } = useLogin(Credentials)
+    const { refetch: refetchUsername, data: dataUsername, error: errorUsername, isFetching: isFetchingUsername } = useUsernamePasswordLogin(usernameCredentials)
     
     const getWebcamStream = async () => {
         setPhoto(null);
@@ -153,6 +159,11 @@ const FaceVerification = () => {
         queueMicrotask(refetch)
     }
 
+    const handleUsernamePasswordSubmit = async (values) => {
+        setUsernameCredentials(values)
+        queueMicrotask(refetchUsername)
+    }
+
     useEffect(() => {
         if (error) {
             const message =
@@ -165,6 +176,17 @@ const FaceVerification = () => {
     }, [error])
 
     useEffect(() => {
+        if (errorUsername) {
+            const message =
+                errorUsername?.response?.data?.error ||
+                errorUsername?.response?.data?.message ||
+                errorUsername?.message ||
+                'Ocurrió un error al iniciar sesión'
+            toast.error(message)
+        }
+    }, [errorUsername])
+
+    useEffect(() => {
         if (data) {
             // Guardar tanto el token como los datos del usuario
             dispatch(setUser({
@@ -173,6 +195,16 @@ const FaceVerification = () => {
             }));
         }
     }, [data])
+
+    useEffect(() => {
+        if (dataUsername) {
+            // Guardar tanto el token como los datos del usuario
+            dispatch(setUser({
+                token: dataUsername.token,
+                data: dataUsername.data
+            }));
+        }
+    }, [dataUsername])
 
     return (
         <div className="flex items-center justify-center bg-cover bg-center relative h-full">
@@ -183,27 +215,47 @@ const FaceVerification = () => {
                 style={{ backgroundImage: `url(${fondo_sjl_bottom})` }}>
             </div>
 
-            <div className='flex flex-col items-center justify-center gap-8 w-full mb-20 min-h-[536px]'>
+            <div className='flex flex-col items-center justify-center gap-6 w-full mb-20 min-h-[536px] px-4'>
                 <img src={logo} alt="logo" className="h-20 w-auto z-10 drop-shadow" />
 
-                <Camera
-                    cameraActive={cameraActive}
-                    videoRef={videoRef}
-                    photo={photo}
-                    isLoading={isFetching}
-                />
+                {/* Título de bienvenida */}
+                <h1 className="text-gray-900 text-2xl md:text-3xl font-bold text-center z-10 drop-shadow-lg">
+                    Bienvenido
+                </h1>
 
-                <ActionButtons
-                    cameraActive={cameraActive}
-                    getWebcamStream={getWebcamStream}
-                    stopWebcamStream={stopWebcamStream}
-                    photo={photo}
-                    CanTakePhoto={CanTakePhoto}
-                    takePhoto={takePhoto}
-                    resetPhoto={resetPhoto}
-                    handleSubmit={handleSubmit}
-                    switchCamera={switchCamera}
-                />
+                {/* Descripción */}
+                <p className="text-gray-800 text-base md:text-lg text-center z-10 drop-shadow max-w-md font-semibold">
+                    Por favor, ingrese sus credenciales para continuar
+                </p>
+
+                {/* Contenido según el método seleccionado */}
+                {loginMethod === "facial" ? (
+                    <>
+                        <Camera
+                            cameraActive={cameraActive}
+                            videoRef={videoRef}
+                            photo={photo}
+                            isLoading={isFetching}
+                        />
+
+                        <ActionButtons
+                            cameraActive={cameraActive}
+                            getWebcamStream={getWebcamStream}
+                            stopWebcamStream={stopWebcamStream}
+                            photo={photo}
+                            CanTakePhoto={CanTakePhoto}
+                            takePhoto={takePhoto}
+                            resetPhoto={resetPhoto}
+                            handleSubmit={handleSubmit}
+                            switchCamera={switchCamera}
+                        />
+                    </>
+                ) : (
+                    <UsernamePasswordForm
+                        onSubmit={handleUsernamePasswordSubmit}
+                        isLoading={isFetchingUsername}
+                    />
+                )}
             </div>
             <canvas ref={canvasRef} style={{ display: 'none' }} />
         </div>
