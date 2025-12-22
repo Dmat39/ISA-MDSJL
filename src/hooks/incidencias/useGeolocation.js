@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { getLocationPermissionMessage } from '../../utils/security';
 
 const useGeolocation = () => {
     const [location, setLocation] = useState({
@@ -133,9 +134,9 @@ const useGeolocation = () => {
 
         // Verificar permisos antes de solicitar ubicación
         const permissionStatus = await checkGeolocationPermission();
-        
+
         if (permissionStatus === 'denied') {
-            const errorMsg = 'Los permisos de ubicación están bloqueados. Ve a Configuración > Safari > Ubicación para habilitarlos.';
+            const errorMsg = getLocationPermissionMessage('denied');
             console.error('❌', errorMsg);
             setLocation(prev => ({
                 ...prev,
@@ -146,10 +147,10 @@ const useGeolocation = () => {
             return;
         }
 
-        // Configuración optimizada para iOS
+        // Configuración de geolocalización
         const options = {
             enableHighAccuracy: true,
-            timeout: 20000, // 20 segundos para iOS
+            timeout: 10000, // 10 segundos (reducido para mejor rendimiento)
             maximumAge: 60000 // 1 minuto de cache
         };
         
@@ -198,23 +199,23 @@ const useGeolocation = () => {
             (error) => {
                 let errorMessage = 'Error al obtener ubicación';
                 let userFriendlyMessage = '';
-                
+
                 switch (error.code) {
                     case error.PERMISSION_DENIED:
                         errorMessage = 'Permiso de ubicación denegado';
-                        userFriendlyMessage = 'Para usar esta función, permite el acceso a tu ubicación. En iOS: Configuración > Safari > Ubicación > Permitir.';
+                        userFriendlyMessage = getLocationPermissionMessage('denied');
                         break;
                     case error.POSITION_UNAVAILABLE:
                         errorMessage = 'Ubicación no disponible';
-                        userFriendlyMessage = 'No se puede determinar tu ubicación. Verifica que tengas GPS activado y buena señal.';
+                        userFriendlyMessage = getLocationPermissionMessage('unavailable');
                         break;
                     case error.TIMEOUT:
                         errorMessage = 'Tiempo de espera agotado';
-                        userFriendlyMessage = 'La solicitud de ubicación tardó demasiado. Intenta de nuevo o verifica tu conexión.';
+                        userFriendlyMessage = getLocationPermissionMessage('timeout');
                         break;
                     default:
                         errorMessage = 'Error desconocido al obtener ubicación';
-                        userFriendlyMessage = 'Ocurrió un error inesperado. Intenta recargar la página.';
+                        userFriendlyMessage = getLocationPermissionMessage('unknown');
                         break;
                 }
                 

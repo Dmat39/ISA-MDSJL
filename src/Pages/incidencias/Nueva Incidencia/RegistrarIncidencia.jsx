@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button, FormControl, MenuItem, Select, TextField, CircularProgress, Alert, Snackbar, LinearProgress } from '@mui/material';
 import { DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { MapPin, Plus, Loader, Navigation } from 'lucide-react';
@@ -11,14 +11,19 @@ import useEnviarPreincidencia from '../../../hooks/incidencias/useEnviarPreincid
 import MapModal from '../../../Components/General/MapModal';
 import ModalSubirFotos from './ModalSubirFotos';
 import { useNavigate } from 'react-router';
+import { useSelector, useDispatch } from 'react-redux';
+import { handleTokenExpired } from '../../../redux/slices/AuthSlice';
+import { getLocationPermissionMessage } from '../../../utils/security';
 
 const RegistrarIncidencia = () => {
     const { tiposCasos, loading: loadingTipos, error: errorTipos } = useTiposCasos();
     const { latitude, longitude, address, loading: loadingLocation, error: errorLocation, permissionStatus, requestPermission } = useGeolocation();
-    const { obtenerJurisdiccionActual, detectarJurisdiccion, jurisdicciones, loading: loadingJurisdiccion, error: errorJurisdiccion } = useJurisdiccionDetection();
+    const { obtenerJurisdiccionActual, detectarJurisdiccion, jurisdicciones, loadJurisdiccionesIfNeeded, loading: loadingJurisdiccion, error: errorJurisdiccion } = useJurisdiccionDetection();
     const { userData, loading: loadingUser, error: errorUser } = useUserData();
-    const { enviarPreincidencia, loading: loadingEnvio, error: errorEnvio } = useEnviarPreincidencia();
+    const { enviarPreincidencia, loading: loadingEnvio, error: errorEnvio, uploadProgress } = useEnviarPreincidencia();
     const navigate = useNavigate();
+    const dispatch = useDispatch();
+    const { token } = useSelector((state) => state.auth);
 
     const [formData, setFormData] = useState({
         tipo: '',
@@ -42,7 +47,9 @@ const RegistrarIncidencia = () => {
     const [fotosModalOpen, setFotosModalOpen] = useState(false);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
     const [descripcionError, setDescripcionError] = useState('');
-    const [progress, setProgress] = useState(0);
+
+    // Ref para el timer de debounce de validación
+    const validacionTimerRef = useRef(null);
 
     // Obtener subtipos basados en el tipo seleccionado
     const getSubtipos = () => {
@@ -81,40 +88,55 @@ const RegistrarIncidencia = () => {
         }
     }, [jurisdiccionDetectada, formData.jurisdiccion]);
 
+    // Cleanup: Limpiar timer de validación al desmontar componente
+    useEffect(() => {
+        return () => {
+            if (validacionTimerRef.current) {
+                clearTimeout(validacionTimerRef.current);
+            }
+        };
+    }, []);
+
     const handleInputChange = (field, value) => {
         setFormData(prev => ({
             ...prev,
             [field]: value
         }));
-        // Validación específica para descripción
+
+        // Validación con debounce para descripción (optimizado para reducir re-renders)
         if (field === 'descripcion') {
-            if (value.length < 10 && value.length > 0) {
-                setDescripcionError('Introduzca correctamente la descripción');
-            } else {
-                setDescripcionError('');
+            // Limpiar timer anterior
+            if (validacionTimerRef.current) {
+                clearTimeout(validacionTimerRef.current);
             }
+
+            // Crear nuevo timer de validación (500ms de inactividad)
+            validacionTimerRef.current = setTimeout(() => {
+                if (value.length < 10 && value.length > 0) {
+                    setDescripcionError('Introduzca correctamente la descripción');
+                } else {
+                    setDescripcionError('');
+                }
+            }, 500);
         }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
-        // Iniciar progreso
-        setProgress(0);
-        const progressInterval = setInterval(() => {
-            setProgress(prev => {
-                if (prev >= 90) {
-                    clearInterval(progressInterval);
-                    return 90;
-                }
-                return prev + 10;
-            });
-        }, 200);
 
-        // Limpiar el intervalo al finalizar (éxito o error)
-        const cleanupProgress = () => {
-            clearInterval(progressInterval);
-        };
+        // CRÍTICO: Verificar token antes de iniciar el envío
+        if (!token) {
+            setSnackbar({
+                open: true,
+                message: 'Tu sesión ha expirado. Redirigiendo al login...',
+                severity: 'warning'
+            });
+            dispatch(handleTokenExpired());
+            setTimeout(() => {
+                navigate('/verificacion', { replace: true });
+            }, 1500);
+            return;
+        }
 
         // Validaciones básicas
         if (!formData.tipo || !formData.subtipo) {
@@ -200,17 +222,6 @@ const RegistrarIncidencia = () => {
 
             const resultado = await enviarPreincidencia(datosEnvio, userData, jurisdiccionId);
 
-            // Limpiar el intervalo de progreso
-            cleanupProgress();
-
-            // Completar progreso al 100%
-            setProgress(100);
-            
-            // Esperar un momento para mostrar el progreso completo
-            setTimeout(() => {
-                setProgress(0);
-            }, 1000);
-
             setSnackbar({
                 open: true,
                 message: 'Incidencia registrada exitosamente',
@@ -238,13 +249,7 @@ const RegistrarIncidencia = () => {
 
         } catch (error) {
             console.error('Error al enviar incidencia:', error);
-            
-            // Limpiar el intervalo de progreso
-            cleanupProgress();
-            
-            // Resetear progreso en caso de error
-            setProgress(0);
-            
+
             // Manejo específico de errores de timeout
             let errorMessage = 'Error al registrar la incidencia';
             
@@ -291,11 +296,6 @@ const RegistrarIncidencia = () => {
 
     // Manejar selección de nueva ubicación desde el mapa
     const handleLocationSelect = async (newLocation) => {
-        console.log('=== NUEVA UBICACIÓN SELECCIONADA DESDE MAPA ===');
-        console.log('Nueva ubicación recibida:', newLocation);
-        console.log('Jurisdicciones disponibles:', jurisdicciones?.length || 0);
-        console.log('Función detectarJurisdiccion disponible:', !!detectarJurisdiccion);
-
         // Actualizar dirección en el formulario
         setFormData(prev => ({
             ...prev,
@@ -308,52 +308,38 @@ const RegistrarIncidencia = () => {
             longitud: newLocation.longitude
         });
 
-        console.log('Coordenadas actualizadas desde mapa:', {
-            latitud: newLocation.latitude,
-            longitud: newLocation.longitude
-        });
+        // LAZY LOADING: Cargar jurisdicciones solo cuando se necesiten
+        await loadJurisdiccionesIfNeeded();
 
         // Detectar jurisdicción usando las coordenadas específicas del mapa
-        if (jurisdicciones && jurisdicciones.length > 0 && detectarJurisdiccion) {
+        if (detectarJurisdiccion) {
             try {
-                console.log('🔍 Iniciando detección de jurisdicción...');
-                console.log('Coordenadas para detectar:', newLocation.latitude, newLocation.longitude);
-
-                // Usar la función detectarJurisdiccion que ya está disponible
                 const jurisdiccionEncontrada = detectarJurisdiccion(newLocation.latitude, newLocation.longitude);
 
                 if (jurisdiccionEncontrada) {
-                    /* console.log('✅ Nueva jurisdicción detectada:', jurisdiccionEncontrada); */
                     setJurisdiccionDetectada(jurisdiccionEncontrada);
-
                     setFormData(prev => ({
                         ...prev,
                         jurisdiccion: jurisdiccionEncontrada.name
                     }));
-
-                    console.log('✅ Jurisdicción actualizada en formulario:', jurisdiccionEncontrada.name);
                 } else {
-                    console.warn('❌ No se encontró jurisdicción para las coordenadas seleccionadas');
                     // Limpiar jurisdicción si no se encuentra
                     setJurisdiccionDetectada(null);
                     setFormData(prev => ({
                         ...prev,
                         jurisdiccion: ''
                     }));
-                    console.log('🧹 Jurisdicción limpiada del formulario');
                 }
             } catch (err) {
-                console.error('💥 Error detectando jurisdicción para nueva ubicación:', err);
+                if (import.meta.env.DEV) {
+                    console.error('Error detectando jurisdicción:', err);
+                }
                 setJurisdiccionDetectada(null);
                 setFormData(prev => ({
                     ...prev,
                     jurisdiccion: ''
                 }));
             }
-        } else {
-            console.warn('⚠️ Condiciones no cumplidas para detectar jurisdicción:');
-            console.warn('- Jurisdicciones cargadas:', !!jurisdicciones && jurisdicciones.length > 0);
-            console.warn('- Función detectarJurisdiccion disponible:', !!detectarJurisdiccion);
         }
 
         // Cerrar el modal del mapa después de seleccionar ubicación
@@ -373,7 +359,7 @@ const RegistrarIncidencia = () => {
                 }));
             } else {
                 // Si no se encuentra jurisdicción, mostrar alerta
-                alert('No se pudo determinar la jurisdicción para su ubicación actual. Por favor, ingrese manualmente.');
+                alert('No se pudo determinar la jurisdicción para su ubicación actual. Por favor, intentelo nuevamente.');
             }
         } catch (error) {
             console.error('Error detectando jurisdicción:', error);
@@ -695,8 +681,8 @@ const RegistrarIncidencia = () => {
                                 }
                             }}
                         >
-                            {permissionStatus === 'denied' 
-                                ? '📱 Para obtener tu ubicación automáticamente, ve a Configuración > Safari > Ubicación > Permitir acceso'
+                            {permissionStatus === 'denied'
+                                ? `📱 ${getLocationPermissionMessage('denied')}`
                                 : errorLocation
                             }
                         </Alert>
@@ -930,12 +916,12 @@ const RegistrarIncidencia = () => {
 
                 {/* Botón Registrar */}
                 <div className="pt-0">
-                    {/* Barra de progreso */}
+                    {/* Barra de progreso REAL (no simulado) */}
                     {loadingEnvio && (
                         <div className="mb-1">
-                            <LinearProgress 
-                                variant="determinate" 
-                                value={progress} 
+                            <LinearProgress
+                                variant="determinate"
+                                value={uploadProgress}
                                 sx={{
                                     height: 6,
                                     borderRadius: 3,
@@ -947,7 +933,7 @@ const RegistrarIncidencia = () => {
                                 }}
                             />
                             <div className="text-center text-xs text-gray-600 mt-1">
-                                {progress < 90 ? `Enviando incidencia... ${progress}%` : 'Procesando datos, por favor espere...'}
+                                {uploadProgress < 100 ? `Enviando incidencia... ${uploadProgress}%` : 'Procesando datos, por favor espere...'}
                             </div>
                         </div>
                     )}

@@ -6,7 +6,9 @@ import { dayjsConZona } from '../../utils/dayjsConfig';
 const DetalleIncidenciaModal = ({ open, onClose, incidencia }) => {
     if (!incidencia) return null;
 
-    const date = dayjsConZona(incidencia.fecha_ocurrencia + 'T' + incidencia.hora_ocurrencia);
+    const date = incidencia.doneAt
+        ? dayjsConZona(incidencia.doneAt)
+        : dayjsConZona(incidencia.fecha_ocurrencia + 'T' + incidencia.hora_ocurrencia);
 
     const getEstadoColor = (estado) => {
         switch (estado?.toUpperCase()) {
@@ -124,10 +126,10 @@ const DetalleIncidenciaModal = ({ open, onClose, incidencia }) => {
                             fontSize: '0.875rem',
                             mb: 1
                         }}>
-                            {incidencia.tipo?.nombre || 'No especificado'}
+                            {incidencia.tipo || 'No especificado'}
                         </Typography>
                         
-                        {incidencia.subtipo?.nombre && (
+                        {incidencia.subtipo && (
                             <>
                                 <Typography variant="body2" sx={{ 
                                     color: '#374151', 
@@ -142,7 +144,7 @@ const DetalleIncidenciaModal = ({ open, onClose, incidencia }) => {
                                     fontSize: '0.875rem',
                                     mb: 1
                                 }}>
-                                    {incidencia.subtipo.nombre}
+                                    {incidencia.subtipo}
                                 </Typography>
                             </>
                         )}

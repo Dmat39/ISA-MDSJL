@@ -70,7 +70,9 @@ const ListaIncidencias = ({ data, inicio, fin, estado, isFetching }) => {
                 </div>
             ) : <>
                 {data?.map((incidencia) => {
-                    const date = dayjsConZona(incidencia.fecha_ocurrencia + 'T' + incidencia.hora_ocurrencia);
+                    const date = incidencia.doneAt
+                        ? dayjsConZona(incidencia.doneAt)
+                        : dayjsConZona(incidencia.fecha_ocurrencia + 'T' + incidencia.hora_ocurrencia);
                     return (
                         <div key={incidencia.id} className="w-full rounded-lg border border-gray-200 bg-white shadow-xs">
                             <div className="p-4">

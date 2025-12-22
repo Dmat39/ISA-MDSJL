@@ -22,9 +22,9 @@ initSecurityMeasures({
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 7 * 24 * 60 * 60 * 1000, // 7 días (1 semana)
-      gcTime: 7 * 24 * 60 * 60 * 1000, // 7 días (mantener en cache)
-      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutos (datos frescos por defecto)
+      gcTime: 10 * 60 * 1000, // 10 minutos (mantener en cache)
+      refetchOnWindowFocus: false, // Cada hook puede configurar esto individualmente
       retry: 1,
     },
   },

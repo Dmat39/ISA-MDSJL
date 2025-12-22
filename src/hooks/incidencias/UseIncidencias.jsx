@@ -34,9 +34,9 @@ const UseIncidencias = ({ inicio, fin, estado }) => {
         queryKey: ['preincidencias', user?.id_sereno, inicio, fin, estado],
         queryFn: listaIncidencias,
         enabled: !!user?.id_sereno, // Solo ejecutar si el usuario tiene id_sereno
-        staleTime: 7 * 24 * 60 * 60 * 1000, // 7 días (1 semana)
-        gcTime: 7 * 24 * 60 * 60 * 1000, // 7 días (mantener en cache)
-        refetchOnWindowFocus: false,
+        staleTime: 2 * 60 * 1000, // 2 minutos (incidencias son datos dinámicos)
+        gcTime: 5 * 60 * 1000, // 5 minutos (mantener en cache)
+        refetchOnWindowFocus: true, // Refetch cuando el usuario vuelve a la app
         retry: 1
     })
 

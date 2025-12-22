@@ -31,7 +31,7 @@ const config = axios.create({
 
 // Configuración específica para el endpoint de incidencias
 const incidenceConfig = axios.create({
-  baseURL: import.meta.env.VITE_APP_ENDPOINT_PRUEBA,
+  baseURL: import.meta.env.VITE_APP_ENDPOINT,
   timeout: 70000, // Aumentado a 70 segundos para dar más tiempo al envío
 });
 

@@ -14,8 +14,8 @@ const useTiposCasos = () => {
     const query = useQuery({
         queryKey: ['tiposCasos'],
         queryFn: fetchTiposCasos,
-        staleTime: 7 * 24 * 60 * 60 * 1000, // 7 días
-        gcTime: 7 * 24 * 60 * 60 * 1000, // 7 días
+        staleTime: 60 * 60 * 1000, // 1 hora (tipos de casos cambian poco, pero no 7 días)
+        gcTime: 2 * 60 * 60 * 1000, // 2 horas (mantener en cache)
         refetchOnWindowFocus: false,
         retry: 1,
         onError: (error) => {

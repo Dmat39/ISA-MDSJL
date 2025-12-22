@@ -8,6 +8,7 @@ import { handleTokenExpired } from '../../redux/slices/AuthSlice';
 const useEnviarPreincidencia = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const queryClient = useQueryClient();
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -16,6 +17,7 @@ const useEnviarPreincidencia = () => {
     const enviarPreincidencia = async (datosFormulario, userData, jurisdiccionId) => {
         setLoading(true);
         setError(null);
+        setUploadProgress(0);
 
         try {
             // Validación de token
@@ -30,22 +32,22 @@ const useEnviarPreincidencia = () => {
             const formData = new FormData();
 
             // Datos fijos
-            formData.append('unidad_id', '1');
-            formData.append('medio_id', '3');
+            formData.append('unidad_id', 1);
+            formData.append('medio_id', 3);
 
             // Datos del usuario
             if (userData) {
-                formData.append('cargo_sereno_id', userData.cargo_sereno_id || '');
-                formData.append('sereno_id', userData.id_sereno || '');
+                formData.append('cargo_sereno_id', Number(userData.cargo_sereno_id));
+                formData.append('sereno_id', Number(userData.id_sereno));
                 formData.append('nombre_reportante', `${userData.nombres || ''} ${userData.apellidos || ''}`.trim());
-                formData.append('turno', userData.turno || 'Mañana');
+                formData.append('turno', userData.turno || 'MANANA');
                 // Agregar teléfono del reportante usando el celular del usuario
                 formData.append('telefono_reportante', userData.celular || '');
             }
 
             // Datos del formulario
-            formData.append('tipo_caso_id', datosFormulario.tipo);
-            formData.append('sub_tipo_caso_id', datosFormulario.subtipo);
+            formData.append('tipo_caso_id', Number(datosFormulario.tipo));
+            formData.append('sub_tipo_caso_id', Number(datosFormulario.subtipo));
             formData.append('direccion', datosFormulario.direccion);
             formData.append('descripcion', datosFormulario.descripcion);
 
@@ -57,7 +59,7 @@ const useEnviarPreincidencia = () => {
 
             // Jurisdicción
             if (jurisdiccionId) {
-                formData.append('jurisdiccion_id', jurisdiccionId.toString());
+                formData.append('jurisdiccion_id', jurisdiccionId);
             }
 
             // Fecha y hora
@@ -70,22 +72,14 @@ const useEnviarPreincidencia = () => {
             }
 
             // Tipo reportante (valor por defecto)
-            formData.append('tipo_reportante_id', '2');
+            formData.append('tipo_reportante_id', 2);
 
             // Fotos - Validación y envío
             if (datosFormulario.fotos && datosFormulario.fotos.length > 0) {
-                console.log(`Enviando ${datosFormulario.fotos.length} archivo(s)`);
-
                 datosFormulario.fotos.forEach((foto, index) => {
                     if (foto.file && foto.file instanceof File) {
-                        console.log(`Agregando archivo ${index}: ${foto.name}, tipo: ${foto.type}, tamaño: ${foto.file.size} bytes`);
-
                         try {
-                            // Opción 1: Sin corchetes (funciona mejor en la mayoría de servidores)
                             formData.append('fotos', foto.file, foto.name);
-
-                            // Log adicional para debugging
-                            console.log(`Archivo ${index} agregado exitosamente al FormData`);
                         } catch (error) {
                             console.error(`Error al agregar archivo ${index} al FormData:`, error);
                             throw new Error(`Error al procesar el archivo ${foto.name}: ${error.message}`);
@@ -95,35 +89,23 @@ const useEnviarPreincidencia = () => {
                         throw new Error(`El archivo ${foto.name} no es válido para envío`);
                     }
                 });
-            } else {
-                console.warn('No hay archivos para enviar');
-                
-            }
-
-            // Verificación final del FormData
-            console.log('Enviando FormData:');
-            let tieneArchivos = false;
-            for (let [key, value] of formData.entries()) {
-                console.log(key, value);
-                if (key === 'fotos' && value instanceof File) {
-                    tieneArchivos = true;
-                }
-            }
-
-            console.log('FormData contiene archivos:', tieneArchivos);
-
-            // Verificación adicional
-            if (datosFormulario.fotos && datosFormulario.fotos.length > 0 && !tieneArchivos) {
-                console.error('ADVERTENCIA: Se esperaban archivos pero no se encontraron en FormData');
             }
 
             const { data: result } = await incidenceApi.post(
-                '/api/preincidencias/',
-                formData
+                '/api/incidencias/',
+                formData,
+                {
+                    // Progreso real de upload (no simulado)
+                    onUploadProgress: (progressEvent) => {
+                        const percentCompleted = Math.round(
+                            (progressEvent.loaded * 100) / progressEvent.total
+                        );
+                        setUploadProgress(percentCompleted);
+                    }
+                }
             );
 
             // Invalidar cache de preincidencias después del envío exitoso
-            console.log('✅ Incidencia enviada exitosamente, invalidando cache...');
             await queryClient.invalidateQueries({
                 queryKey: ['preincidencias'],
             });
@@ -131,19 +113,20 @@ const useEnviarPreincidencia = () => {
             return result;
 
         } catch (err) {
-            console.error('Error enviando preincidencia:', err);
+            // Solo log de errores críticos en desarrollo
+            if (import.meta.env.DEV) {
+                console.error('Error enviando preincidencia:', err);
+            }
 
             // Manejo específico de errores de timeout
             if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
                 setError('Tiempo de envío superado, por favor verifique su conexión a internet.');
             } else if (err.response) {
                 const { status, data } = err.response;
-                console.error('Detalles del error:', { status, data });
 
                 if (status === 400) {
                     setError(`Error de validación: ${data?.message || 'Datos del formulario incorrectos'}`);
                 } else if (status === 401) {
-                    console.warn('Token expirado durante envío de preincidencia');
                     dispatch(handleTokenExpired());
                     navigate('/verificacion', { replace: true });
                     setError('Sesión expirada. Redirigiendo al login...');
@@ -153,7 +136,6 @@ const useEnviarPreincidencia = () => {
                     setError(`Error ${status}: ${data?.message || err.message}`);
                 }
             } else if (err.request) {
-                console.error('Error de red:', err.request);
                 setError('Error de conexión 📡. Verifique su conexión a internet.');
             } else {
                 setError(err.message || 'Error desconocido');
@@ -162,10 +144,12 @@ const useEnviarPreincidencia = () => {
             throw err;
         } finally {
             setLoading(false);
+            // Resetear progreso después de completar (éxito o error)
+            setTimeout(() => setUploadProgress(0), 1000);
         }
     };
 
-    return { enviarPreincidencia, loading, error };
+    return { enviarPreincidencia, loading, error, uploadProgress };
 };
 
 export default useEnviarPreincidencia;

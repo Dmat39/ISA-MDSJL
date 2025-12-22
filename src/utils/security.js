@@ -142,6 +142,82 @@ export const clearSensitiveData = () => {
 };
 
 /**
+ * Detecta el sistema operativo del usuario
+ * @returns {Object} { isIOS: boolean, isAndroid: boolean, isMobile: boolean, browser: string }
+ */
+export const detectOS = () => {
+  const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+
+  const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+  const isAndroid = /android/i.test(userAgent);
+  const isMobile = isIOS || isAndroid;
+
+  // Detectar navegador en iOS
+  let browser = 'unknown';
+  if (isIOS) {
+    if (/CriOS/i.test(userAgent)) {
+      browser = 'Chrome';
+    } else if (/FxiOS/i.test(userAgent)) {
+      browser = 'Firefox';
+    } else if (/Safari/i.test(userAgent)) {
+      browser = 'Safari';
+    }
+  } else if (isAndroid) {
+    if (/Chrome/i.test(userAgent)) {
+      browser = 'Chrome';
+    } else if (/Firefox/i.test(userAgent)) {
+      browser = 'Firefox';
+    }
+  }
+
+  return {
+    isIOS,
+    isAndroid,
+    isMobile,
+    browser,
+    userAgent
+  };
+};
+
+/**
+ * Genera mensaje de ayuda contextual para permisos de ubicación según SO
+ * @param {string} errorType - Tipo de error: 'denied' | 'unavailable' | 'timeout'
+ * @returns {string} Mensaje de ayuda contextual
+ */
+export const getLocationPermissionMessage = (errorType = 'denied') => {
+  const { isIOS, isAndroid, browser } = detectOS();
+
+  if (errorType === 'denied') {
+    if (isIOS) {
+      if (browser === 'Safari') {
+        return 'Para usar esta función, permite el acceso a tu ubicación. Ve a: Configuración > Safari > Ubicación > Permitir.';
+      } else if (browser === 'Chrome') {
+        return 'Para usar esta función, permite el acceso a tu ubicación. Ve a: Configuración > Chrome > Ubicación > Permitir.';
+      }
+      return 'Para usar esta función, permite el acceso a tu ubicación en la configuración de iOS.';
+    } else if (isAndroid) {
+      if (browser === 'Chrome') {
+        return 'Para usar esta función, permite el acceso a tu ubicación. Ve a: Configuración > Aplicaciones > Chrome > Permisos > Ubicación.';
+      } else if (browser === 'Firefox') {
+        return 'Para usar esta función, permite el acceso a tu ubicación. Ve a: Configuración > Aplicaciones > Firefox > Permisos > Ubicación.';
+      }
+      return 'Para usar esta función, permite el acceso a tu ubicación en la configuración de Android.';
+    }
+    return 'Para usar esta función, permite el acceso a tu ubicación en la configuración de tu navegador.';
+  }
+
+  if (errorType === 'unavailable') {
+    return 'No se puede determinar tu ubicación. Verifica que tengas GPS activado y buena señal.';
+  }
+
+  if (errorType === 'timeout') {
+    return 'La solicitud de ubicación tardó demasiado. Intenta de nuevo o verifica tu conexión.';
+  }
+
+  return 'Ocurrió un error inesperado. Intenta recargar la página.';
+};
+
+/**
  * Inicializa todas las medidas de seguridad
  * Llamar esta función al inicio de la aplicación
  */

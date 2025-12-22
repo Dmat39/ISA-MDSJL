@@ -184,21 +184,71 @@ const ModalSubirFotos = ({ open, onClose, fotos, onFotosChange, subtipoSeleccion
         }
     };
 
-    const crearPreview = (file) => {
+    // Función para comprimir imágenes (reduce memoria en ~99%)
+    const comprimirImagen = (file, maxWidth = 400, maxHeight = 400, quality = 0.8) => {
         return new Promise((resolve, reject) => {
+            // Si es video, no comprimir - devolver URL directamente
+            if (file.type.startsWith('video/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = () => resolve('/placeholder-video.png');
+                reader.readAsDataURL(file);
+                return;
+            }
+
             const reader = new FileReader();
-            
-            reader.onload = (e) => resolve(e.target.result);
+
+            reader.onload = (e) => {
+                const img = new Image();
+
+                img.onload = () => {
+                    // Calcular nuevas dimensiones manteniendo aspect ratio
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width = Math.round((width * maxHeight) / height);
+                            height = maxHeight;
+                        }
+                    }
+
+                    // Crear canvas para comprimir
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Convertir a base64 comprimido
+                    try {
+                        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                        resolve(compressedDataUrl);
+                    } catch (error) {
+                        console.warn('Error al comprimir, usando original:', error);
+                        resolve(e.target.result);
+                    }
+                };
+
+                img.onerror = () => {
+                    console.warn('Error al cargar imagen para comprimir, usando original');
+                    resolve(e.target.result);
+                };
+
+                img.src = e.target.result;
+            };
+
             reader.onerror = () => {
                 console.warn('Error al crear preview, usando fallback');
-                // Fallback para iOS: crear un preview básico
-                if (file.type.startsWith('video/')) {
-                    resolve('/placeholder-video.png'); // Placeholder para videos
-                } else {
-                    resolve('/placeholder-image.png'); // Placeholder para imágenes
-                }
+                resolve('/placeholder-image.png');
             };
-            
+
             try {
                 reader.readAsDataURL(file);
             } catch (error) {
@@ -206,6 +256,11 @@ const ModalSubirFotos = ({ open, onClose, fotos, onFotosChange, subtipoSeleccion
                 reject(error);
             }
         });
+    };
+
+    const crearPreview = (file) => {
+        // Usar función de compresión para reducir memoria
+        return comprimirImagen(file, 400, 400, 0.8);
     };
 
     const eliminarArchivo = (archivoId) => {
