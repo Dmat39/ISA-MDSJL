@@ -33,7 +33,7 @@ const useEnviarPreincidencia = () => {
 
             // Datos fijos
             formData.append('unidad_id', 1);
-            formData.append('medio_id', 3);
+            formData.append('medio_id', 1);
 
             // Datos del usuario
             if (userData) {
