@@ -3,7 +3,10 @@ import { AlertCircle, CalendarDays, CheckCircle, Clock, Eye, Plus, XCircle } fro
 import { dayjsConZona } from "../../utils/dayjsConfig";
 import { useState } from "react";
 import DetalleIncidenciaModal from "../../Components/General/DetalleIncidenciaModal";
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 
+dayjs.extend(utc);
 
 const ListaIncidencias = ({ data, inicio, fin, estado, isFetching }) => {
     const [modalOpen, setModalOpen] = useState(false);
@@ -71,7 +74,7 @@ const ListaIncidencias = ({ data, inicio, fin, estado, isFetching }) => {
             ) : <>
                 {data?.map((incidencia) => {
                     const date = incidencia.doneAt
-                        ? dayjsConZona(incidencia.doneAt)
+                        ? dayjs.utc(incidencia.doneAt)
                         : dayjsConZona(incidencia.fecha_ocurrencia + 'T' + incidencia.hora_ocurrencia);
                     return (
                         <div key={incidencia.id} className="w-full rounded-lg border border-gray-200 bg-white shadow-xs">

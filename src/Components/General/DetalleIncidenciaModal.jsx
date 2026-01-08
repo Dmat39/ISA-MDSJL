@@ -2,12 +2,16 @@ import React from 'react';
 import { Dialog, DialogTitle, DialogContent, IconButton, Typography, Box, Chip, Grid } from '@mui/material';
 import { X, MapPin, FileText, Camera, Calendar, Clock } from 'lucide-react';
 import { dayjsConZona } from '../../utils/dayjsConfig';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
 
 const DetalleIncidenciaModal = ({ open, onClose, incidencia }) => {
     if (!incidencia) return null;
 
     const date = incidencia.doneAt
-        ? dayjsConZona(incidencia.doneAt)
+        ? dayjs.utc(incidencia.doneAt)
         : dayjsConZona(incidencia.fecha_ocurrencia + 'T' + incidencia.hora_ocurrencia);
 
     const getEstadoColor = (estado) => {
